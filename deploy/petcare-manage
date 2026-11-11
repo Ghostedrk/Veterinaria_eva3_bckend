@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Ejecuta manage.py con la configuración de producción. Ejemplo:
+#   sudo petcare-manage createsuperuser
+exec sudo -u petcare bash -c '
+    set -a
+    . /etc/petcare/petcare.env
+    [ -f /run/petcare-hosts.env ] && . /run/petcare-hosts.env
+    set +a
+    cd /opt/petcare && exec .venv/bin/python manage.py "$@"
+' petcare-manage "$@"

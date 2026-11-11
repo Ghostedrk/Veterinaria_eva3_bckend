@@ -1,0 +1,16 @@
+{% extends "clinic/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<section class="panel form-panel">
+    <h1>{{ title }}</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="links">
+            <button>Guardar</button>
+            {% if object %}<a href="{% url 'record-detail' slug object.pk %}">Cancelar</a>
+            {% else %}<a href="{% url 'record-list' slug %}">Cancelar</a>{% endif %}
+        </div>
+    </form>
+</section>
+{% endblock %}

@@ -1,0 +1,12 @@
+[Unit]
+Description=PetCare - envío de recordatorios de vacunación y controles
+After=postgresql.service
+
+[Service]
+Type=oneshot
+User=petcare
+Group=petcare
+WorkingDirectory=/opt/petcare
+EnvironmentFile=/etc/petcare/petcare.env
+EnvironmentFile=-/run/petcare-hosts.env
+ExecStart=/opt/petcare/.venv/bin/python manage.py enviar_recordatorios

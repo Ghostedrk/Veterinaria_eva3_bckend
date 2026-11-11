@@ -1,0 +1,29 @@
+{% extends "clinic/base.html" %}
+{% load static %}
+{% block title %}Ingresar{% endblock %}
+{% block main_class %} full-bleed{% endblock %}
+{% block content %}
+<div class="login">
+    <section class="login-side">
+        <span class="logo-plate"><img src="{% static 'clinic/logo.png' %}" alt="Veterinaria San Francisco"></span>
+        <h1>Cada visita deja una huella en su ficha</h1>
+        <ol class="trail" aria-label="Lo que gestiona el panel">
+            <li><svg class="paw" aria-hidden="true"><use href="#paw"/></svg>Agenda por profesional, sin horas cruzadas</li>
+            <li><svg class="paw" aria-hidden="true"><use href="#paw"/></svg>Fichas clínicas con diagnósticos, recetas y exámenes</li>
+            <li><svg class="paw" aria-hidden="true"><use href="#paw"/></svg>Avisos de vacunas y controles para cada tutor</li>
+        </ol>
+    </section>
+    <div class="login-form">
+        <section class="panel">
+            <h2>Ingresar al panel</h2>
+            <p class="subtitle">Acceso para el equipo de la clínica.</p>
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <input type="hidden" name="next" value="{{ next }}">
+                <button>Ingresar</button>
+            </form>
+        </section>
+    </div>
+</div>
+{% endblock %}

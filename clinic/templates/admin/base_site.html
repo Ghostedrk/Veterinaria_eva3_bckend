@@ -1,0 +1,17 @@
+{% extends "admin/base.html" %}
+{% load static %}
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title }}{% endblock %}
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Nunito:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="{% static 'clinic/admin.css' %}">{% endblock %}
+{% block branding %}
+<div id="site-name">
+    <a href="{% url 'admin:index' %}" class="pc-brand">
+        <img src="{% static 'clinic/logo.png' %}" alt="" width="96" height="48">
+        <span>{{ site_header }}<small>Django Admin · PetCare</small></span>
+    </a>
+</div>
+{% if user.is_anonymous %}{% include "admin/color_theme_toggle.html" %}{% endif %}
+{% endblock %}
+{% block userlinks %}<a href="{% url 'dashboard' %}">Panel clínico</a> / {{ block.super }}{% endblock %}
+{% block nav-global %}{% endblock %}

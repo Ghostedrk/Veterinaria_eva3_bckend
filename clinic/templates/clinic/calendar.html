@@ -1,0 +1,52 @@
+{% extends "clinic/base.html" %}
+{% block title %}Agenda{% endblock %}
+{% block content %}
+<div class="toolbar">
+    <div><h1>Agenda veterinaria</h1><p class="subtitle">Semana del {{ start|date:"d/m/Y" }} al {{ end|date:"d/m/Y" }}</p></div>
+    <a class="button" href="{% url 'record-create' 'citas' %}{% if professional %}?profesional={{ professional.pk }}{% endif %}">Nueva cita</a>
+</div>
+<nav class="links" aria-label="Configuración de agenda">
+    <a href="{% url 'record-list' 'profesionales' %}">Profesionales</a>
+    <a href="{% url 'record-list' 'disponibilidad' %}">Disponibilidad</a>
+    <a href="{% url 'record-list' 'citas' %}">Listado de citas</a>
+</nav>
+<div class="toolbar" style="margin-top:1rem">
+    <form method="get" class="filter">
+        <label>Semana de <input name="fecha" type="date" value="{{ start|date:'Y-m-d' }}"></label>
+        <label>Profesional
+            <select name="profesional">
+                <option value="">Todos</option>
+                {% for vet in professionals %}<option value="{{ vet.pk }}"{% if vet.pk == professional.pk %} selected{% endif %}>{{ vet }}</option>{% endfor %}
+            </select>
+        </label>
+        <button class="secondary">Filtrar</button>
+    </form>
+    <div class="links">
+        <a href="?fecha={{ previous|date:'Y-m-d' }}{% if professional %}&amp;profesional={{ professional.pk }}{% endif %}">Semana anterior</a>
+        <a href="?fecha={{ next_week|date:'Y-m-d' }}{% if professional %}&amp;profesional={{ professional.pk }}{% endif %}">Semana siguiente</a>
+    </div>
+</div>
+<div class="week">
+    {% for day in days %}
+    <section class="panel day{% if day.date == today %} today{% endif %}">
+        <h2>{{ day.date|date:"l d/m"|capfirst }}</h2>
+        {% for window in day.windows %}
+        <a class="window" href="{% url 'record-detail' 'disponibilidad' window.pk %}">{{ window.inicio|time:"H:i" }}–{{ window.fin|time:"H:i" }} · {{ window.profesional }}</a>
+        {% empty %}<p class="trail-empty">Sin disponibilidad.</p>{% endfor %}
+        {% if day.appointments %}
+        <ol class="trail">
+            {% for appointment in day.appointments %}
+            <li class="{{ appointment.estado }}">
+                <svg class="paw" aria-hidden="true"><use href="#paw"/></svg>
+                <time>{{ appointment.inicio|time:"H:i" }}</time>
+                <a href="{% url 'record-detail' 'citas' appointment.pk %}">{{ appointment.mascota.nombre }}</a>
+                <span class="meta">{{ appointment.profesional }}</span>
+                <span class="tag {{ appointment.estado }}">{{ appointment.get_estado_display }}</span>
+            </li>
+            {% endfor %}
+        </ol>
+        {% endif %}
+    </section>
+    {% endfor %}
+</div>
+{% endblock %}

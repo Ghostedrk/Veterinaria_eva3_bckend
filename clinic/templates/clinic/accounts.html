@@ -1,0 +1,33 @@
+{% extends "clinic/base.html" %}
+{% block title %}Cuentas del equipo{% endblock %}
+{% block content %}
+<h1>Cuentas del equipo</h1>
+<div class="columns">
+    <section class="panel">
+        <h2>Acceso al panel</h2>
+        <ul class="plain">
+            {% for account in accounts %}
+            <li class="toolbar">
+                <div><strong>{{ account.username }}</strong>
+                <span>{% if account.is_superuser %}Jefatura{% else %}Administración{% endif %} · {% if account.is_active %}Activa{% else %}Inactiva{% endif %}</span></div>
+                {% if not account.is_superuser %}
+                <form method="post" action="{% url 'account-status' account.pk %}">
+                    {% csrf_token %}
+                    {% if account.is_active %}<button class="secondary" name="activo" value="0">Desactivar</button>
+                    {% else %}<button class="secondary" name="activo" value="1">Activar</button>{% endif %}
+                </form>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    <section class="panel">
+        <h2>Nueva cuenta de administración</h2>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button>Crear cuenta</button>
+        </form>
+    </section>
+</div>
+{% endblock %}

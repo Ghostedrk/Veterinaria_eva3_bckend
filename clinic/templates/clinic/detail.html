@@ -1,0 +1,58 @@
+{% extends "clinic/base.html" %}
+{% block title %}{{ object }}{% endblock %}
+{% block content %}
+<a class="back" href="{% url 'record-list' slug %}">Volver a {{ resource.title|lower }}</a>
+<div class="toolbar">
+    <h1>{{ object }}</h1>
+    {% if not readonly %}
+    <div class="links">
+        <a class="button" href="{% url 'record-edit' slug object.pk %}">Editar</a>
+        <a class="button secondary" href="{% url 'record-delete' slug object.pk %}">Eliminar</a>
+    </div>
+    {% endif %}
+</div>
+{% if slug == "insumos" %}
+<p><a class="button" href="{% url 'record-create' 'movimientos' %}?insumo={{ object.pk }}">Registrar movimiento</a></p>
+{% endif %}
+<section class="panel">
+    <dl class="details">
+    {% for label, value in fields %}
+        <div><dt>{{ label }}</dt><dd>{{ value|default_if_none:"—"|linebreaksbr }}</dd></div>
+    {% endfor %}
+    </dl>
+</section>
+{% if slug == "tutores" %}
+<section class="panel related">
+    <h2>Mascotas del tutor</h2>
+    <ul class="plain">
+    {% for pet in pets %}<li><a href="{% url 'record-detail' 'mascotas' pet.pk %}">{{ pet.nombre }}</a> <span>{{ pet.especie }}</span></li>
+    {% empty %}<li>No hay mascotas vinculadas.</li>{% endfor %}
+    </ul>
+</section>
+{% endif %}
+{% if pet_profile %}
+<section class="panel related">
+    <div class="toolbar">
+        <h2>Ficha clínica</h2>
+        <div class="links">
+            <a href="{% url 'record-create' 'citas' %}?mascota={{ object.pk }}">Agendar cita</a>
+            <a href="{% url 'record-create' 'recordatorios' %}?mascota={{ object.pk }}">Programar recordatorio</a>
+            <a class="button" href="{% url 'record-create' 'atenciones' %}?mascota={{ object.pk }}">Nueva atención</a>
+        </div>
+    </div>
+    {% if visits %}
+    <ol class="trail">
+    {% for visit in visits %}
+        <li>
+            <svg class="paw" aria-hidden="true"><use href="#paw"/></svg>
+            <time datetime="{{ visit.fecha|date:'Y-m-d' }}">{{ visit.fecha|date:"d/m/Y" }}</time>
+            <a href="{% url 'record-detail' 'atenciones' visit.pk %}">{{ visit.diagnostico|truncatechars:80 }}</a>
+            <span class="meta">{{ visit.profesional }}</span>
+            {% if visit.tratamiento %}<span class="note">Tratamiento: {{ visit.tratamiento|truncatechars:110 }}</span>{% endif %}
+        </li>
+    {% endfor %}
+    </ol>
+    {% else %}<p class="trail-empty">Aún no hay atenciones registradas.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

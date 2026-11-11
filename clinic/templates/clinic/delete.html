@@ -1,0 +1,13 @@
+{% extends "clinic/base.html" %}
+{% block title %}Eliminar registro{% endblock %}
+{% block content %}
+<section class="panel form-panel">
+    <h1>Eliminar registro</h1>
+    <p>¿Quieres eliminar <strong>{{ object }}</strong>?</p>
+    <form method="post" class="links">
+        {% csrf_token %}
+        <button class="danger">Eliminar definitivamente</button>
+        <a href="{% url 'record-detail' slug object.pk %}">Cancelar</a>
+    </form>
+</section>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "clinic/base.html" %}
+{% block title %}Inicio{% endblock %}
+{% block content %}
+<div class="toolbar">
+    <div>
+        <h1>Hola, {{ user.first_name|default:user.username }}</h1>
+        <p class="subtitle">{{ today|date:"l d \d\e F \d\e Y"|capfirst }}</p>
+    </div>
+    <a class="button" href="{% url 'record-create' 'citas' %}">Agendar cita</a>
+</div>
+<div class="stats">
+    <a class="stat" href="{% url 'calendar' %}"><strong>{{ appointment_count }}</strong> citas hoy</a>
+    <a class="stat" href="{% url 'record-list' 'mascotas' %}"><strong>{{ pet_count }}</strong> mascotas registradas</a>
+    <a class="stat{% if reminder_count %} alert{% endif %}" href="{% url 'record-list' 'recordatorios' %}"><strong>{{ reminder_count }}</strong> avisos por enviar</a>
+    <a class="stat{% if stock_count %} alert{% endif %}" href="{% url 'record-list' 'insumos' %}"><strong>{{ stock_count }}</strong> insumos en stock mínimo</a>
+</div>
+<div class="home-grid">
+    <section class="panel">
+        <h2>Recorrido del día</h2>
+        {% if appointments %}
+        <ol class="trail">
+            {% for appointment in appointments %}
+            <li{% if appointment.fin < now %} class="past"{% endif %}>
+                <svg class="paw" aria-hidden="true"><use href="#paw"/></svg>
+                <time datetime="{{ appointment.inicio|date:'c' }}">{{ appointment.inicio|time:"H:i" }}</time>
+                <a href="{% url 'record-detail' 'citas' appointment.pk %}">{{ appointment.mascota.nombre }}</a> · {{ appointment.motivo }}
+                <span class="meta">{{ appointment.profesional }} · tutor {{ appointment.mascota.tutor }}</span>
+            </li>
+            {% endfor %}
+        </ol>
+        {% if appointment_count > appointments|length %}<p><a href="{% url 'calendar' %}">Ver las {{ appointment_count }} citas en la agenda</a></p>{% endif %}
+        {% else %}
+        <p class="trail-empty">Hoy no hay citas agendadas. <a href="{% url 'record-create' 'citas' %}">Agenda la primera</a>.</p>
+        {% endif %}
+    </section>
+    <section class="panel">
+        <h2>Stock para revisar</h2>
+        <ul class="plain">
+            {% for item in low_stock %}
+            <li><a href="{% url 'record-detail' 'insumos' item.pk %}">{{ item.nombre }}</a> <span>{{ item.stock }} {{ item.unidad }} · mínimo {{ item.minimo }}</span></li>
+            {% empty %}<li>Todo el inventario está sobre el mínimo.</li>{% endfor %}
+        </ul>
+    </section>
+</div>
+{% endblock %}

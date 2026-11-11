@@ -1,0 +1,38 @@
+/* Veterinaria San Francisco · estilo "Huellas" para Django Admin */
+:root, html[data-theme="light"] {
+    --font-family-primary: "Nunito", system-ui, sans-serif;
+    --primary: #174a2a;
+    --secondary: #6b4426;
+    --accent: #e2c9a6;
+    --primary-fg: #fff;
+    --header-color: #dcebdd;
+    --header-branding-color: #fff;
+    --header-bg: #174a2a;
+    --header-link-color: #fff;
+    --breadcrumbs-bg: #6b4426;
+    --breadcrumbs-fg: #f1e6dc;
+    --breadcrumbs-link-fg: #fff;
+    --link-fg: #1f7a35;
+    --link-hover-color: #174a2a;
+    --link-selected-fg: #174a2a;
+    --button-bg: #1f7a35;
+    --button-hover-bg: #174a2a;
+    --default-button-bg: #174a2a;
+    --default-button-hover-bg: #0f3820;
+    --selected-row: #e3efe0;
+}
+@media (prefers-color-scheme: dark) {
+    html:not([data-theme="light"]) { --link-fg: #8fc6a1; --link-hover-color: #b5dcc1; --link-selected-fg: #b5dcc1; --selected-row: #22342a; }
+}
+html[data-theme="dark"] { --link-fg: #8fc6a1; --link-hover-color: #b5dcc1; --link-selected-fg: #b5dcc1; --selected-row: #22342a; }
+h1, h2, #site-name, .module caption, .module h2 { font-family: "Baloo 2", "Nunito", sans-serif; }
+.module h2, .module caption, .inline-group h2 { background: #1f7a35; font-weight: 600; }
+.button, input[type=submit], input[type=button], .submit-row input, a.button { border-radius: 999px; }
+.pc-brand { display: inline-flex; align-items: center; gap: .7rem; }
+.pc-brand img { width: 96px; height: 48px; object-fit: cover; border-radius: 8px; background: #fff; padding: 2px 4px; }
+.pc-brand small { display: block; font-family: "Nunito", sans-serif; font-size: .7rem; font-weight: 400; color: #a9c6ae; }
+.pc-badge { display: inline-block; padding: .1rem .6rem; border-radius: 999px; font-size: .75rem; font-weight: 700; white-space: nowrap; }
+.pc-ok { background: #e3efe0; color: #174a2a; }
+.pc-info { background: #f1e6dc; color: #6b4426; }
+.pc-warn { background: #f8e6c4; color: #6b4708; }
+.pc-muted { background: #e6e6e6; color: #444; }

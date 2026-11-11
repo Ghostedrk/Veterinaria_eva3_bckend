@@ -1,0 +1,20 @@
+[Unit]
+Description=PetCare - Django con Gunicorn
+After=network-online.target postgresql.service
+Wants=network-online.target postgresql.service
+
+[Service]
+User=petcare
+Group=petcare
+WorkingDirectory=/opt/petcare
+# "+" ejecuta la detección de IP como root antes de arrancar Gunicorn.
+ExecStartPre=+/bin/bash /opt/petcare/deploy/petcare-hosts.sh
+EnvironmentFile=/etc/petcare/petcare.env
+EnvironmentFile=-/run/petcare-hosts.env
+ExecStart=/opt/petcare/.venv/bin/gunicorn petcare.wsgi:application \
+    --bind 127.0.0.1:8000 --workers 3 --timeout 60 --access-logfile -
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
