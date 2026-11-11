@@ -200,5 +200,7 @@ tfoot th, tfoot td { border-top: 2px solid var(--linea); font-family: "Baloo 2",
 .test-cards { margin: 1rem 0; padding: .6rem .85rem; border-radius: 12px; background: var(--musgo); }
 .test-cards summary { cursor: pointer; font-weight: 700; color: var(--cafe); }
 .pay-box .details { grid-template-columns: minmax(0, 1fr); margin-top: 1rem; }
-.order-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); align-items: start; }
+/* La tabla de insumos ocupa todo el ancho y el pago va debajo, salvo en pantallas anchas. */
+.order-grid { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
+@media (min-width: 1200px) { .order-grid { grid-template-columns: minmax(0, 1.8fr) minmax(18rem, 1fr); } }
 .order-grid td:not(:first-child), .order-grid th { white-space: nowrap; }
