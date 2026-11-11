@@ -57,6 +57,8 @@ Las decisiones de alcance, el nombre, el logo y la validación final de cada flu
 
 | «Hay alguna forma de optimizar la pagina? siento que va bastante lenta» | Se midieron los tiempos en el sitio público: Django respondía rápido y el problema eran los bytes sobre una conexión lenta hacia us-east-1. Logo de 150 KB a 15 KB (WebP), compresión gzip en Nginx, estáticos versionados con caché de un año, fuentes sin bloquear el dibujado y conexiones persistentes a PostgreSQL | `clinic/static/clinic/logo.webp`, `deploy/nginx-*.conf`, `petcare/settings.py` y `clinic/templates/` |
 
+| «podríamos crear alguna cuenta que restringa unas cuantas opciones como crear y eliminar profesionales quizá, hacer pedidos» y «que no eliminar si no dejar como inactivo» | Rol Recepción (grupo de Django) sin gestión de profesionales, compras ni Django Admin, aplicado en el panel, la API y el Admin. Selección de rol al crear cuentas. Profesionales con estado activo/inactivo en vez de eliminación, con bloqueo si tienen citas por delante | `clinic/roles.py`, `clinic/views.py`, `clinic/services.py`, `clinic/admin.py`, `clinic/api.py` y `clinic/migrations/0003_profesional_activo_y_recepcion.py` |
+
 ## Criterio propio aplicado
 
 - Se descartó exponer PostgreSQL a Internet. La base solo escucha en `127.0.0.1` dentro de la instancia.

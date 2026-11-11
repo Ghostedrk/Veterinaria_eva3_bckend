@@ -50,7 +50,7 @@ class ClinicFlows(TestCase):
         self.assertEqual(self.client.get("/").status_code, 403)
         self.assertEqual(self.client.get("/api/tutores/").status_code, 403)
         self.client.force_login(self.manager)
-        self.assertContains(self.client.get("/cuentas/"), "Nueva cuenta de administración")
+        self.assertContains(self.client.get("/cuentas/"), "Nueva cuenta del equipo")
         csrf_client = Client(enforce_csrf_checks=True)
         csrf_client.force_login(self.staff)
         self.assertEqual(csrf_client.post("/api/tutores/", {}, content_type="application/json").status_code, 403)
@@ -242,3 +242,77 @@ class ClinicFlows(TestCase):
         order.refresh_from_db()
         self.assertEqual(order.estado, OrdenCompra.Estado.ANULADA)
         self.assertEqual(Client().get("/compras/").status_code, 302)
+
+    def reception_user(self):
+        self.client.force_login(self.manager)
+        response = self.client.post("/cuentas/", {
+            "username": "recepcion1", "password1": "Huellas-2026-seguras", "password2": "Huellas-2026-seguras",
+            "rol": "recepcion",
+        })
+        self.assertEqual(response.status_code, 302)
+        user = get_user_model().objects.get(username="recepcion1")
+        self.assertTrue(user.is_staff)
+        self.client.force_login(user)
+        return user
+
+    def test_reception_role_limits_professionals_purchases_and_admin(self):
+        self.reception_user()
+        page = self.client.get("/")
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, "Recepción")
+        self.assertNotContains(page, "Django Admin")
+        self.assertNotContains(page, 'href="/compras/"')
+        # Puede trabajar con la agenda y los pacientes.
+        self.assertEqual(self.client.get("/gestion/profesionales/").status_code, 200)
+        self.assertEqual(self.client.get("/gestion/tutores/nuevo/").status_code, 200)
+        # No gestiona profesionales, no compra y no entra al Admin.
+        self.assertEqual(self.client.get("/gestion/profesionales/nuevo/").status_code, 403)
+        self.assertEqual(self.client.post(f"/profesionales/{self.vet.pk}/estado/", {"activo": "0"}).status_code, 403)
+        self.assertEqual(self.client.get("/compras/").status_code, 403)
+        self.assertEqual(self.client.get("/api/profesionales/").status_code, 200)
+        self.assertEqual(self.client.post("/api/profesionales/", {"nombre": "X", "especialidad": "Y"},
+                                          content_type="application/json").status_code, 403)
+        self.assertEqual(self.client.get("/admin/").status_code, 302)
+        self.vet.refresh_from_db()
+        self.assertTrue(self.vet.activo)
+
+        # Jefatura puede devolverla a Administración.
+        user = get_user_model().objects.get(username="recepcion1")
+        self.client.force_login(self.manager)
+        self.client.post(f"/cuentas/{user.pk}/rol/", {"rol": "administracion"})
+        self.client.force_login(user)
+        self.assertEqual(self.client.get("/compras/").status_code, 200)
+
+    def test_professional_is_deactivated_not_deleted(self):
+        finish = self.start + timedelta(minutes=30)
+        self.client.post("/api/citas/", self.appointment(self.start, finish), content_type="application/json")
+        status_url = f"/profesionales/{self.vet.pk}/estado/"
+        # Con citas por delante no se puede desactivar.
+        self.client.post(status_url, {"activo": "0"})
+        self.vet.refresh_from_db()
+        self.assertTrue(self.vet.activo)
+        Cita.objects.update(estado=Cita.Estado.CANCELADA)
+
+        self.client.post(status_url, {"activo": "0"})
+        self.vet.refresh_from_db()
+        self.assertFalse(self.vet.activo)
+        self.assertFalse(Disponibilidad.objects.filter(profesional=self.vet).exists())
+        self.assertTrue(Profesional.objects.filter(pk=self.vet.pk).exists())
+        # Eliminar redirige al detalle y no borra; un inactivo no recibe citas nuevas ni aparece en el formulario.
+        self.assertRedirects(self.client.post(f"/gestion/profesionales/{self.vet.pk}/eliminar/"),
+                             f"/gestion/profesionales/{self.vet.pk}/")
+        form = self.client.get("/gestion/citas/nuevo/").context["form"]
+        self.assertNotIn(self.vet, form.fields["profesional"].queryset)
+        Disponibilidad.objects.create(profesional=self.vet, inicio=self.start, fin=self.start + timedelta(hours=2))
+        response = self.client.post("/api/citas/", self.appointment(self.start, finish), content_type="application/json")
+        self.assertContains(response, "inactivo", status_code=400)
+        # Su historial sigue editable y puede reactivarse.
+        self.assertEqual(self.client.get(f"/gestion/citas/{Cita.objects.first().pk}/editar/").status_code, 200)
+        self.client.post(status_url, {"activo": "1"})
+        self.vet.refresh_from_db()
+        self.assertTrue(self.vet.activo)
+        # DELETE en la API también desactiva en vez de borrar.
+        Disponibilidad.objects.all().delete()
+        self.assertEqual(self.client.delete(f"/api/profesionales/{self.vet.pk}/").status_code, 204)
+        self.vet.refresh_from_db()
+        self.assertFalse(self.vet.activo)

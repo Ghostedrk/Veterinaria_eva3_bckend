@@ -2,12 +2,14 @@ from datetime import date, datetime, time, timedelta
 from functools import wraps
 
 from django.contrib import messages
+from django import forms
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import F, Q
 from django.db.models.deletion import ProtectedError
 from django.http import Http404
@@ -17,8 +19,9 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_http_methods, require_POST, require_safe
 
 from .models import Cita, Disponibilidad, Insumo, Mascota, Profesional, Recordatorio, Tutor
+from . import roles
 from .resources import RESOURCES, is_readonly
-from .services import delete_record, save_record
+from .services import delete_record, save_record, set_professional_active
 
 User = get_user_model()
 PROTECTED_MESSAGE = "Hay registros vinculados a este elemento. Revisa esas relaciones antes de eliminarlo."
@@ -36,6 +39,22 @@ def staff_required(view):
     return wrapped
 
 
+def full_staff_required(view):
+    """Jefatura y Administración; Recepción recibe 403."""
+    @staff_required
+    @wraps(view)
+    def wrapped(request, *args, **kwargs):
+        if not roles.is_full_staff(request.user):
+            raise PermissionDenied
+        return view(request, *args, **kwargs)
+    return wrapped
+
+
+def check_can_edit(request, slug):
+    if slug in roles.READ_ONLY_FOR_RECEPTION and not roles.is_full_staff(request.user):
+        raise PermissionDenied
+
+
 def resource_for(slug):
     try:
         return RESOURCES[slug]
@@ -50,6 +69,8 @@ def field_label(model, name):
 def field_value(obj, name):
     display = getattr(obj, f"get_{name}_display", None)
     value = display() if display else getattr(obj, name)
+    if isinstance(value, bool):
+        return "Sí" if value else "No"
     if isinstance(value, datetime):
         return timezone.localtime(value).strftime("%d/%m/%Y %H:%M")
     if isinstance(value, date):
@@ -116,7 +137,7 @@ def calendar(request):
     return render(request, "clinic/calendar.html", {
         "days": days, "today": timezone.localdate(), "start": start, "end": end - timedelta(days=1),
         "previous": start - timedelta(days=7), "next_week": end,
-        "professionals": professionals, "professional": professional,
+        "professionals": professionals.filter(activo=True), "professional": professional,
     })
 
 
@@ -148,6 +169,7 @@ def record_detail(request, slug, pk):
     return render(request, "clinic/detail.html", {
         "resource": resource, "slug": slug, "object": obj,
         "readonly": is_readonly(resource, obj),
+        "can_edit": slug not in roles.READ_ONLY_FOR_RECEPTION or roles.is_full_staff(request.user),
         "fields": [(field_label(resource.model, name), field_value(obj, name)) for name in names],
         "pets": obj.mascotas.all() if isinstance(obj, Tutor) else None,
         "pet_profile": isinstance(obj, Mascota),
@@ -159,6 +181,7 @@ def record_detail(request, slug, pk):
 @require_http_methods(["GET", "HEAD", "POST"])
 def record_form(request, slug, pk=None):
     resource = resource_for(slug)
+    check_can_edit(request, slug)
     obj = get_object_or_404(resource.queryset(), pk=pk) if pk is not None else None
     if obj is not None and is_readonly(resource, obj):
         raise PermissionDenied
@@ -195,7 +218,11 @@ def record_form(request, slug, pk=None):
 @require_http_methods(["GET", "HEAD", "POST"])
 def record_delete(request, slug, pk):
     resource = resource_for(slug)
+    check_can_edit(request, slug)
     obj = get_object_or_404(resource.queryset(), pk=pk)
+    if resource.soft_delete:
+        messages.info(request, "Este registro no se elimina: desactívalo para conservar su historial.")
+        return redirect("record-detail", slug=slug, pk=pk)
     if is_readonly(resource, obj):
         raise PermissionDenied
     if request.method == "POST":
@@ -216,20 +243,37 @@ def record_delete(request, slug, pk):
     return render(request, "clinic/delete.html", {"object": obj, "slug": slug})
 
 
+class AccountForm(UserCreationForm):
+    rol = forms.ChoiceField(choices=roles.ROLES, initial="administracion",
+                            help_text="Recepción no gestiona profesionales, no hace compras ni entra a Django Admin.")
+
+
+def apply_role(account, role):
+    group, _ = Group.objects.get_or_create(name=roles.RECEPCION)
+    if role == "recepcion":
+        account.groups.add(group)
+    else:
+        account.groups.remove(group)
+
+
 @staff_required
 @require_http_methods(["GET", "HEAD", "POST"])
 def accounts(request):
     if not request.user.is_superuser:
         raise PermissionDenied
-    form = UserCreationForm(request.POST if request.method == "POST" else None)
+    form = AccountForm(request.POST if request.method == "POST" else None)
     if request.method == "POST" and form.is_valid():
-        account = form.save(commit=False)
-        account.is_staff = True
-        account.save()
-        messages.success(request, "Cuenta de administración creada.")
+        with transaction.atomic():
+            account = form.save(commit=False)
+            account.is_staff = True
+            account.save()
+            apply_role(account, form.cleaned_data["rol"])
+        messages.success(request, f"Cuenta de {dict(roles.ROLES)[form.cleaned_data['rol']]} creada.")
         return redirect("accounts")
+    team = User.objects.filter(is_staff=True).prefetch_related("groups").order_by("username")
     return render(request, "clinic/accounts.html", {
-        "form": form, "accounts": User.objects.filter(is_staff=True).order_by("username"),
+        "form": form,
+        "accounts": [(account, roles.role_name(account)) for account in team],
     })
 
 
@@ -243,3 +287,31 @@ def account_status(request, pk):
     account.save(update_fields=["is_active"])
     messages.success(request, "Acceso actualizado.")
     return redirect("accounts")
+
+
+@staff_required
+@require_POST
+def account_role(request, pk):
+    if not request.user.is_superuser:
+        raise PermissionDenied
+    account = get_object_or_404(User, is_staff=True, is_superuser=False, pk=pk)
+    role = request.POST.get("rol")
+    if role not in dict(roles.ROLES):
+        raise PermissionDenied
+    apply_role(account, role)
+    messages.success(request, f"{account.username} ahora tiene el rol {dict(roles.ROLES)[role]}.")
+    return redirect("accounts")
+
+
+@full_staff_required
+@require_POST
+def professional_status(request, pk):
+    professional = get_object_or_404(Profesional, pk=pk)
+    active = request.POST.get("activo") == "1"
+    try:
+        set_professional_active(professional, active, user=request.user)
+    except ValidationError as exc:
+        messages.error(request, " ".join(exc.messages))
+    else:
+        messages.success(request, f"{professional.nombre} quedó {'activo' if active else 'inactivo'}.")
+    return redirect("record-detail", slug="profesionales", pk=pk)

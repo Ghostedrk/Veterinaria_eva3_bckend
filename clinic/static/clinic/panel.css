@@ -204,3 +204,12 @@ tfoot th, tfoot td { border-top: 2px solid var(--linea); font-family: "Baloo 2",
 .order-grid { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
 @media (min-width: 1200px) { .order-grid { grid-template-columns: minmax(0, 1.8fr) minmax(18rem, 1fr); } }
 .order-grid td:not(:first-child), .order-grid th { white-space: nowrap; }
+
+/* Cuentas y roles */
+.account-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .5rem 1rem; }
+.account-row .links { margin: 0; }
+.account-row button { font-size: .9rem; padding: .3rem .8rem; }
+.tag.role-jefatura { background: var(--bosque); color: var(--blanco); }
+.tag.role-administracion { background: var(--brote); color: var(--bosque); }
+.tag.role-recepcion { background: var(--cafe-claro); color: var(--cafe); }
+.details.roles { grid-template-columns: minmax(0, 1fr); }

@@ -36,13 +36,13 @@
         <a href="{% url 'record-list' 'atenciones' %}"{% if "/gestion/atenciones/" in p %} aria-current="page"{% endif %}>Fichas clínicas</a>
         <a href="{% url 'record-list' 'recordatorios' %}"{% if "/gestion/recordatorios/" in p %} aria-current="page"{% endif %}>Recordatorios</a>
         <a href="{% url 'record-list' 'insumos' %}"{% if "/gestion/insumos/" in p or "/gestion/movimientos/" in p %} aria-current="page"{% endif %}>Inventario</a>
-        <a href="{% url 'purchase-list' %}"{% if "/compras/" in p %} aria-current="page"{% endif %}>Compras</a>
+        {% if can_purchase %}<a href="{% url 'purchase-list' %}"{% if "/compras/" in p %} aria-current="page"{% endif %}>Compras</a>{% endif %}
         {% if user.is_superuser %}<a href="{% url 'accounts' %}"{% if "/cuentas/" in p %} aria-current="page"{% endif %}>Cuentas</a>{% endif %}
-        <a href="{% url 'admin:index' %}">Django Admin</a>
+        {% if can_use_admin %}<a href="{% url 'admin:index' %}">Django Admin</a>{% endif %}
         {% endwith %}
     </nav>
     <div class="side-account">
-        <a href="{% url 'password-change' %}" title="Cambiar contraseña">{{ user.username }}<small>{% if user.is_superuser %}Jefatura{% else %}Administración{% endif %}</small></a>
+        <a href="{% url 'password-change' %}" title="Cambiar contraseña">{{ user.username }}<small>{{ role_name }}</small></a>
         <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="ghost">Cerrar sesión</button></form>
     </div>
 </aside>

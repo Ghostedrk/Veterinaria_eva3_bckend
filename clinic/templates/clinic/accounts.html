@@ -6,28 +6,41 @@
     <section class="panel">
         <h2>Acceso al panel</h2>
         <ul class="plain">
-            {% for account in accounts %}
-            <li class="toolbar">
+            {% for account, role in accounts %}
+            <li class="account-row">
                 <div><strong>{{ account.username }}</strong>
-                <span>{% if account.is_superuser %}Jefatura{% else %}Administración{% endif %} · {% if account.is_active %}Activa{% else %}Inactiva{% endif %}</span></div>
+                <span><span class="tag role-{{ role|slugify }}">{{ role }}</span> · {% if account.is_active %}Activa{% else %}Inactiva{% endif %}</span></div>
                 {% if not account.is_superuser %}
-                <form method="post" action="{% url 'account-status' account.pk %}">
-                    {% csrf_token %}
-                    {% if account.is_active %}<button class="secondary" name="activo" value="0">Desactivar</button>
-                    {% else %}<button class="secondary" name="activo" value="1">Activar</button>{% endif %}
-                </form>
+                <div class="links">
+                    <form method="post" action="{% url 'account-role' account.pk %}">
+                        {% csrf_token %}
+                        {% if role == "Recepción" %}<button class="secondary" name="rol" value="administracion">Pasar a Administración</button>
+                        {% else %}<button class="secondary" name="rol" value="recepcion">Pasar a Recepción</button>{% endif %}
+                    </form>
+                    <form method="post" action="{% url 'account-status' account.pk %}">
+                        {% csrf_token %}
+                        {% if account.is_active %}<button class="secondary" name="activo" value="0">Desactivar</button>
+                        {% else %}<button class="secondary" name="activo" value="1">Activar</button>{% endif %}
+                    </form>
+                </div>
                 {% endif %}
             </li>
             {% endfor %}
         </ul>
     </section>
     <section class="panel">
-        <h2>Nueva cuenta de administración</h2>
+        <h2>Nueva cuenta del equipo</h2>
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
             <button>Crear cuenta</button>
         </form>
+        <h3 style="margin-top:1.25rem">Qué puede hacer cada rol</h3>
+        <dl class="details roles">
+            <div><dt>Jefatura</dt><dd>Todo, incluidas las cuentas del equipo.</dd></div>
+            <div><dt>Administración</dt><dd>Toda la operación de la clínica, compras con Webpay y Django Admin.</dd></div>
+            <div><dt>Recepción</dt><dd>Agenda, tutores, mascotas, fichas, recordatorios e inventario. No gestiona profesionales, no hace compras ni entra a Django Admin.</dd></div>
+        </dl>
     </section>
 </div>
 {% endblock %}

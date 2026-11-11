@@ -12,7 +12,7 @@ from django.views.decorators.http import require_http_methods, require_POST, req
 
 from . import purchases, webpay
 from .models import Insumo, ItemOrden, OrdenCompra
-from .views import staff_required
+from .views import full_staff_required
 
 OrderForm = forms.modelform_factory(OrdenCompra, fields=("proveedor", "observacion"))
 
@@ -24,10 +24,10 @@ def item_formset(extra):
     )
 
 
-@staff_required
+@full_staff_required
 @require_safe
 def purchase_list(request):
-    orders = OrdenCompra.objects.annotate(n_items=Count("items"))
+    orders = OrdenCompra.objects.annotate(n_items=Count("items")).order_by("-creada_en", "-pk")
     state = request.GET.get("estado", "")
     if state in OrdenCompra.Estado.values:
         orders = orders.filter(estado=state)
@@ -37,7 +37,7 @@ def purchase_list(request):
     })
 
 
-@staff_required
+@full_staff_required
 @require_http_methods(["GET", "HEAD", "POST"])
 def purchase_form(request, pk=None):
     order = get_object_or_404(OrdenCompra, pk=pk) if pk else None
@@ -69,7 +69,7 @@ def purchase_form(request, pk=None):
     return render(request, "clinic/purchase_form.html", {"form": form, "formset": formset, "order": order})
 
 
-@staff_required
+@full_staff_required
 @require_safe
 def purchase_detail(request, pk):
     order = get_object_or_404(OrdenCompra.objects.select_related("creada_por", "pagada_por"), pk=pk)
@@ -78,7 +78,7 @@ def purchase_detail(request, pk):
     })
 
 
-@staff_required
+@full_staff_required
 @require_POST
 def purchase_pay(request, pk):
     order = get_object_or_404(OrdenCompra, pk=pk)
@@ -94,7 +94,7 @@ def purchase_pay(request, pk):
     return redirect("purchase-detail", pk=order.pk)
 
 
-@staff_required
+@full_staff_required
 @require_POST
 def purchase_cancel(request, pk):
     with transaction.atomic():

@@ -3,13 +3,13 @@
 {% block content %}
 <div class="toolbar">
     <h1>{{ resource.title }}</h1>
-    <a class="button" href="{% url 'record-create' slug %}">{% if slug == "movimientos" %}Registrar movimiento{% else %}Nuevo registro{% endif %}</a>
+    {% if slug != "profesionales" or can_manage_professionals %}<a class="button" href="{% url 'record-create' slug %}">{% if slug == "movimientos" %}Registrar movimiento{% else %}Nuevo registro{% endif %}</a>{% endif %}
 </div>
 {% if slug == "insumos" or slug == "movimientos" %}
 <nav class="toolbar links" aria-label="Inventario">
     <a href="{% url 'record-list' 'insumos' %}">Insumos</a>
     <a href="{% url 'record-list' 'movimientos' %}">Historial de movimientos</a>
-    <a href="{% url 'purchase-list' %}">Órdenes de compra</a>
+    {% if can_purchase %}<a href="{% url 'purchase-list' %}">Órdenes de compra</a>{% endif %}
 </nav>
 {% endif %}
 <form method="get" class="toolbar filter">

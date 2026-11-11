@@ -40,7 +40,7 @@
             <li><a href="{% url 'record-detail' 'insumos' item.pk %}">{{ item.nombre }}</a> <span>{{ item.stock }} {{ item.unidad }} · mínimo {{ item.minimo }}</span></li>
             {% empty %}<li>Todo el inventario está sobre el mínimo.</li>{% endfor %}
         </ul>
-        {% if low_stock %}<p style="margin-top:.75rem"><a class="button" href="{% url 'purchase-create' %}?reponer=1">Pedir compra de reposición</a></p>{% endif %}
+        {% if low_stock and can_purchase %}<p style="margin-top:.75rem"><a class="button" href="{% url 'purchase-create' %}?reponer=1">Pedir compra de reposición</a></p>{% endif %}
     </section>
 </div>
 {% endblock %}

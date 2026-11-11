@@ -1,8 +1,20 @@
 from dataclasses import dataclass
 
-from django.forms import DateInput, DateTimeInput, modelform_factory
+from django.db.models import Q
+from django.forms import DateInput, DateTimeInput, ModelForm, modelform_factory
 
 from . import models
+
+
+class ActiveProfessionalForm(ModelForm):
+    """Only active professionals are offered; an existing record keeps its current one."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        field = self.fields.get("profesional")
+        if field is not None:
+            current = getattr(self.instance, "profesional_id", None)
+            field.queryset = models.Profesional.objects.filter(Q(activo=True) | Q(pk=current))
 
 
 @dataclass(frozen=True)
@@ -14,6 +26,7 @@ class Resource:
     search: tuple
     related: tuple = ()
     append_only: bool = False
+    soft_delete: bool = False  # Se desactiva en lugar de eliminarse.
 
     def queryset(self):
         return self.model.objects.select_related(*self.related) if self.related else self.model.objects.all()
@@ -28,7 +41,7 @@ class Resource:
                 )
             elif field.get_internal_type() == "DateField":
                 widgets[name] = DateInput(format="%Y-%m-%d", attrs={"type": "date"})
-        return modelform_factory(self.model, fields=self.fields, widgets=widgets)
+        return modelform_factory(self.model, form=ActiveProfessionalForm, fields=self.fields, widgets=widgets)
 
 
 RESOURCES = {
@@ -39,7 +52,8 @@ RESOURCES = {
         ("tutor", "nombre", "especie", "raza", "nacimiento"), ("nombre", "especie", "raza", "tutor"),
         ("nombre", "especie", "tutor__nombre"), ("tutor",)),
     "profesionales": Resource(models.Profesional, "Profesionales",
-        ("nombre", "especialidad"), ("nombre", "especialidad"), ("nombre", "especialidad")),
+        ("nombre", "especialidad"), ("nombre", "especialidad", "activo"), ("nombre", "especialidad"),
+        soft_delete=True),
     "disponibilidad": Resource(models.Disponibilidad, "Disponibilidad",
         ("profesional", "inicio", "fin"), ("profesional", "inicio", "fin"),
         ("profesional__nombre",), ("profesional",)),

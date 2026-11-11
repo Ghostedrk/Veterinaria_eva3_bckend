@@ -4,16 +4,24 @@
 <a class="back" href="{% url 'record-list' slug %}">Volver a {{ resource.title|lower }}</a>
 <div class="toolbar">
     <h1>{{ object }}</h1>
-    {% if not readonly %}
+    {% if not readonly and can_edit %}
     <div class="links">
         <a class="button" href="{% url 'record-edit' slug object.pk %}">Editar</a>
+        {% if resource.soft_delete %}
+        <form method="post" action="{% url 'professional-status' object.pk %}">
+            {% csrf_token %}
+            {% if object.activo %}<button class="secondary" name="activo" value="0">Desactivar</button>
+            {% else %}<button class="secondary" name="activo" value="1">Reactivar</button>{% endif %}
+        </form>
+        {% else %}
         <a class="button secondary" href="{% url 'record-delete' slug object.pk %}">Eliminar</a>
+        {% endif %}
     </div>
     {% endif %}
 </div>
 {% if slug == "insumos" %}
 <p class="links"><a class="button" href="{% url 'record-create' 'movimientos' %}?insumo={{ object.pk }}">Registrar movimiento</a>
-<a class="button secondary" href="{% url 'purchase-create' %}">Pedir compra</a></p>
+{% if can_purchase %}<a class="button secondary" href="{% url 'purchase-create' %}">Pedir compra</a>{% endif %}</p>
 {% endif %}
 <section class="panel">
     <dl class="details">
@@ -22,6 +30,9 @@
     {% endfor %}
     </dl>
 </section>
+{% if slug == "profesionales" and not object.activo %}
+<p class="notice">Profesional inactivo: conserva su historial, pero no aparece al agendar citas, crear disponibilidad ni registrar atenciones.</p>
+{% endif %}
 {% if slug == "tutores" %}
 <section class="panel related">
     <h2>Mascotas del tutor</h2>

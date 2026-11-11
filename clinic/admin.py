@@ -1,18 +1,22 @@
 from django import forms
 from django.contrib import admin, messages
 from django.core.exceptions import ValidationError
+from django.db import models
 from django.db.models import Count, F
 from django.utils import timezone
 from django.utils.html import format_html
 
 from .models import (Atencion, Cita, Disponibilidad, Insumo, ItemOrden, Mascota, Movimiento, OrdenCompra,
                      Profesional, Recordatorio, Tutor)
+from . import roles
 from .services import (affected_appointments, delete_record, reminder_send_date, save_record,
-                       validate_rules)
+                       set_professional_active, validate_rules)
 
 admin.site.site_header = "Veterinaria San Francisco"
 admin.site.site_title = "Administración PetCare"
 admin.site.index_title = "Administración de la clínica"
+# Recepción no entra a Django Admin: solo Jefatura y Administración.
+admin.site.has_permission = lambda request: roles.is_full_staff(request.user)
 
 
 def badge(text, tone):
@@ -21,6 +25,13 @@ def badge(text, tone):
 
 class RulesForm(forms.ModelForm):
     """Runs the same business rules as the panel and the API before saving."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        field = self.fields.get("profesional")
+        if field is not None:
+            current = getattr(self.instance, "profesional_id", None)
+            field.queryset = field.queryset.filter(models.Q(activo=True) | models.Q(pk=current))
 
     def _post_clean(self):
         super()._post_clean()
@@ -43,7 +54,7 @@ class ClinicAdmin(admin.ModelAdmin):
 
     @staticmethod
     def is_staff(request):
-        return request.user.is_active and request.user.is_staff
+        return roles.is_full_staff(request.user)
 
     def has_module_permission(self, request):
         return self.is_staff(request)
@@ -150,9 +161,42 @@ class MascotaAdmin(ClinicAdmin):
 
 @admin.register(Profesional)
 class ProfesionalAdmin(ClinicAdmin):
-    list_display = ("nombre", "especialidad")
-    list_filter = ("especialidad",)
+    list_display = ("nombre", "especialidad", "estado")
+    list_filter = ("activo", "especialidad")
     search_fields = ("nombre", "especialidad")
+    readonly_fields = ("activo",)
+    actions = ("desactivar", "reactivar")
+
+    @admin.display(description="Estado", ordering="activo")
+    def estado(self, obj):
+        return badge("Activo", "ok") if obj.activo else badge("Inactivo", "muted")
+
+    def get_search_results(self, request, queryset, search_term):
+        # El autocompletado de citas, disponibilidad y atenciones ofrece solo activos.
+        queryset, distinct = super().get_search_results(request, queryset, search_term)
+        if request.path.endswith("/autocomplete/"):
+            queryset = queryset.filter(activo=True)
+        return queryset, distinct
+
+    def has_delete_permission(self, request, obj=None):
+        return False  # Se desactivan para conservar su historial.
+
+    def change_active(self, request, queryset, active):
+        for professional in queryset:
+            try:
+                set_professional_active(professional, active, user=request.user)
+            except ValidationError as exc:
+                self.message_user(request, " ".join(exc.messages), messages.WARNING)
+            else:
+                self.message_user(request, f"{professional.nombre} quedó {'activo' if active else 'inactivo'}.")
+
+    @admin.action(description="Desactivar profesionales seleccionados")
+    def desactivar(self, request, queryset):
+        self.change_active(request, queryset, False)
+
+    @admin.action(description="Reactivar profesionales seleccionados")
+    def reactivar(self, request, queryset):
+        self.change_active(request, queryset, True)
 
 
 @admin.register(Disponibilidad)

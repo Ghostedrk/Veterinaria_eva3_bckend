@@ -34,13 +34,15 @@ class Mascota(models.Model):
 class Profesional(models.Model):
     nombre = models.CharField(max_length=150)
     especialidad = models.CharField(max_length=100)
+    activo = models.BooleanField(default=True, db_index=True,
+                                 help_text="Un profesional inactivo conserva su historial, pero no recibe citas nuevas.")
 
     class Meta:
-        ordering = ["nombre", "pk"]
+        ordering = ["-activo", "nombre", "pk"]
         verbose_name_plural = "profesionales"
 
     def __str__(self):
-        return self.nombre
+        return self.nombre if self.activo else f"{self.nombre} (inactivo)"
 
 
 class Disponibilidad(models.Model):

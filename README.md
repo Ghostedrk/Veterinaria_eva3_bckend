@@ -50,7 +50,17 @@ $env:PGPASSWORD = 'reemplazar-por-una-clave-local'
 & .\.venv\Scripts\python.exe manage.py runserver
 ```
 
-Abre [el panel local](http://127.0.0.1:8000/) e ingresa con la cuenta creada. El comando `createsuperuser` provisiona la primera cuenta de **Jefatura**. En **Cuentas**, Jefatura puede crear, activar y desactivar cuentas de **Administración**. Ambos roles pueden gestionar las operaciones de la clínica.
+Abre [el panel local](http://127.0.0.1:8000/) e ingresa con la cuenta creada. El comando `createsuperuser` crea la primera cuenta de **Jefatura**. En **Cuentas**, Jefatura crea las demás cuentas, elige su rol, cambia el rol y activa o desactiva el acceso.
+
+| Rol | Puede | No puede |
+| --- | --- | --- |
+| **Jefatura** | Todo, incluidas las cuentas del equipo | — |
+| **Administración** | Toda la operación, gestión de profesionales, compras con Webpay y Django Admin | Gestionar cuentas |
+| **Recepción** | Agenda, citas, disponibilidad, tutores, mascotas, fichas clínicas, recordatorios e inventario | Crear, editar o desactivar profesionales; crear o pagar órdenes de compra; entrar a Django Admin |
+
+Las restricciones de Recepción se aplican en el servidor (panel, API y Django Admin), no solo ocultando botones. El rol se guarda como el grupo "Recepción" de Django, que crea la migración `0003`.
+
+Los **profesionales no se eliminan, se desactivan**, para conservar sus citas y fichas. Un profesional inactivo no aparece al agendar citas, crear disponibilidad ni registrar atenciones. No se puede desactivar a alguien con citas agendadas por delante. Al desactivarlo se libera su disponibilidad futura, y se puede reactivar en cualquier momento.
 
 Para una prueba rápida de la interfaz también puedes usar `$env:PETCARE_DB = 'sqlite'` antes de migrar. Usa PostgreSQL para la evaluación y ejecuta `Remove-Item Env:PETCARE_DB` si activaste SQLite y quieres volver a PostgreSQL.
 

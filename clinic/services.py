@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import connection, models, transaction
 from django.utils import timezone
 
-from .models import Cita, Disponibilidad, Insumo, Mascota, Movimiento, Recordatorio
+from .models import Atencion, Cita, Disponibilidad, Insumo, Mascota, Movimiento, Profesional, Recordatorio
 
 AGENDA_MODELS = (Cita, Disponibilidad)
 REMINDER_DATE_ERROR = "La anticipación o el intervalo exceden el rango de fechas."
@@ -64,8 +64,35 @@ def reminder_send_date(target, lead_days):
         raise ValidationError(REMINDER_DATE_ERROR) from exc
 
 
+INACTIVE_ERROR = "El profesional está inactivo. Elige otro o reactívalo primero."
+
+
+def validate_professional_is_active(obj):
+    """New work can't be assigned to an inactive professional; history stays editable."""
+    if not obj.profesional_id or obj.profesional.activo:
+        return
+    if obj.pk:
+        previous = type(obj).objects.filter(pk=obj.pk).values_list("profesional_id", flat=True).first()
+        if previous == obj.profesional_id:
+            return
+    raise ValidationError({"profesional": INACTIVE_ERROR})
+
+
+def upcoming_appointments(professional):
+    return Cita.objects.filter(profesional=professional, estado=Cita.Estado.AGENDADA, fin__gt=timezone.now())
+
+
 def validate_rules(obj):
     """Business rules shared by the panel, the API and Django Admin."""
+    if isinstance(obj, (Cita, Disponibilidad, Atencion)):
+        validate_professional_is_active(obj)
+    if isinstance(obj, Profesional) and obj.pk and not obj.activo:
+        pending = upcoming_appointments(obj).count()
+        if pending:
+            raise ValidationError(
+                f"{obj.nombre} tiene {pending} cita(s) agendada(s) por delante. "
+                "Reprográmalas o cancélalas antes de desactivarlo."
+            )
     if isinstance(obj, Mascota) and obj.nacimiento and obj.nacimiento > timezone.localdate():
         raise ValidationError({"nacimiento": "La fecha de nacimiento no puede estar en el futuro."})
     if isinstance(obj, Cita):
@@ -132,3 +159,15 @@ def delete_record(obj):
         raise ValidationError("El recordatorio enviado forma parte del historial.")
     obj.delete()
 
+
+
+@transaction.atomic
+def set_professional_active(professional, active, *, user):
+    """Soft delete: deactivating keeps history and frees the professional's future availability."""
+    lock_agenda()
+    professional = Profesional.objects.select_for_update().get(pk=professional.pk)
+    professional.activo = active
+    professional = save_record(professional, user=user, changed_fields={"activo"})
+    if not active:
+        Disponibilidad.objects.filter(profesional=professional, fin__gt=timezone.now()).delete()
+    return professional

@@ -2,12 +2,13 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models.deletion import ProtectedError
 from django.http import Http404
-from rest_framework import filters, serializers, viewsets
+from rest_framework import filters, permissions, serializers, viewsets
 from rest_framework.exceptions import APIException, PermissionDenied
 from rest_framework.routers import DefaultRouter
 
 from .resources import RESOURCES, is_readonly
-from .services import delete_record, save_record
+from .roles import RolePermission
+from .services import delete_record, save_record, set_professional_active
 from .views import CONFLICT_MESSAGE, PROTECTED_MESSAGE
 
 
@@ -39,6 +40,7 @@ class ClinicSerializer(serializers.ModelSerializer):
 
 class ClinicViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
+    permission_classes = [permissions.IsAdminUser, RolePermission]
 
     def get_queryset(self):
         return self.resource.queryset()
@@ -51,6 +53,13 @@ class ClinicViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         if is_readonly(self.resource, instance):
             raise PermissionDenied("El registro forma parte del historial.")
+        if self.resource.soft_delete:
+            # DELETE desactiva el registro y conserva su historial.
+            try:
+                set_professional_active(instance, False, user=self.request.user)
+            except ValidationError as exc:
+                raise Conflict(" ".join(exc.messages)) from exc
+            return
         try:
             delete_record(instance)
         except ProtectedError as exc:
