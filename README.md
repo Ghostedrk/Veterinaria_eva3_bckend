@@ -1,5 +1,7 @@
 # Veterinaria San Francisco
 
+**Aplicación desplegada en AWS EC2:** [http://44.213.33.107/](http://44.213.33.107/) · Django Admin: [http://44.213.33.107/admin/](http://44.213.33.107/admin/)
+
 Panel interno para el Proyecto 1 de la Evaluación 3 de Desarrollo Backend, cuyo caso académico se llama PetCare. La interfaz lleva el nombre y el logo entregados por el estudiante. El diseño "Huellas" toma el verde y el café del logo, usa un menú lateral y muestra la agenda y la ficha clínica de cada mascota como un camino de huellas. Se adapta a pantallas de celular.
 
 Stack: Django 5.2, Django REST Framework, PostgreSQL, plantillas HTML/CSS, Django Admin, y Gunicorn con Nginx en AWS EC2.
