@@ -114,7 +114,7 @@ Navegador ──HTTP:80──▶ Nginx ──▶ Gunicorn (127.0.0.1:8000) ─�
 
    ```bash
    sudo apt-get update && sudo apt-get install -y git
-   sudo git clone https://github.com/<usuario>/<repositorio>.git /opt/petcare
+   sudo git clone https://github.com/Ghostedrk/Veterinaria_eva3_bckend.git /opt/petcare
    sudo bash /opt/petcare/deploy/setup.sh
    sudo petcare-manage createsuperuser
    ```
