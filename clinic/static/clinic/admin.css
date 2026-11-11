@@ -29,7 +29,7 @@ h1, h2, #site-name, .module caption, .module h2 { font-family: "Baloo 2", "Nunit
 .module h2, .module caption, .inline-group h2 { background: #1f7a35; font-weight: 600; }
 .button, input[type=submit], input[type=button], .submit-row input, a.button { border-radius: 999px; }
 .pc-brand { display: inline-flex; align-items: center; gap: .7rem; }
-.pc-brand img { width: 96px; height: 48px; object-fit: cover; border-radius: 8px; background: #fff; padding: 2px 4px; }
+.pc-brand img { width: 96px; height: 48px; object-fit: contain; border-radius: 8px; background: #fff; padding: 2px 4px; }
 .pc-brand small { display: block; font-family: "Nunito", sans-serif; font-size: .7rem; font-weight: 400; color: #a9c6ae; }
 .pc-badge { display: inline-block; padding: .1rem .6rem; border-radius: 999px; font-size: .75rem; font-weight: 700; white-space: nowrap; }
 .pc-ok { background: #e3efe0; color: #174a2a; }

@@ -42,7 +42,7 @@ p { margin: 0 0 1rem; }
     overflow-y: auto;
 }
 .logo-plate { display: block; background: var(--blanco); border-radius: 12px; padding: .2rem .4rem; overflow: hidden; }
-.logo-plate img { display: block; width: 100%; aspect-ratio: 2 / 1; object-fit: cover; }
+.logo-plate img { display: block; width: 100%; height: auto; aspect-ratio: 2 / 1; object-fit: contain; }
 .side-nav { display: flex; flex-direction: column; gap: .15rem; }
 .side-nav a {
     display: flex; align-items: center; gap: .55rem;
