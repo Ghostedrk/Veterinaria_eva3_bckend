@@ -99,7 +99,7 @@ El panel de Django Admin está en `/admin/` y usa las mismas cuentas del panel c
 
 ## Despliegue en AWS EC2
 
-**IP pública:** `http://<IP-PUBLICA-EC2>/` · Admin: `http://<IP-PUBLICA-EC2>/admin/`
+**IP pública (AWS EC2, IP elástica):** [http://44.213.33.107/](http://44.213.33.107/) · Django Admin: [http://44.213.33.107/admin/](http://44.213.33.107/admin/)
 
 Arquitectura en una única instancia EC2:
 
@@ -119,7 +119,7 @@ Navegador ──HTTP:80──▶ Nginx ──▶ Gunicorn (127.0.0.1:8000) ─�
    sudo petcare-manage createsuperuser
    ```
 
-4. Abre `http://<IP-PUBLICA-EC2>/` en el navegador.
+4. Abre `http://44.213.33.107/` en el navegador.
 
 `setup.sh` se puede volver a ejecutar sin perder datos. Instala PostgreSQL, Nginx y Python, crea la base y su usuario con una clave aleatoria, y genera `/etc/petcare/petcare.env` con `PETCARE_DEBUG=0` y una `SECRET_KEY` propia. Después aplica las migraciones, ejecuta `collectstatic` y deja los servicios activos al arrancar. La IP y el DNS públicos se agregan solos a `ALLOWED_HOSTS` en cada inicio, porque en AWS Academy la IP cambia al reiniciar el laboratorio.
 
