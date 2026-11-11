@@ -213,3 +213,74 @@ tfoot th, tfoot td { border-top: 2px solid var(--linea); font-family: "Baloo 2",
 .tag.role-administracion { background: var(--brote); color: var(--bosque); }
 .tag.role-recepcion { background: var(--cafe-claro); color: var(--cafe); }
 .details.roles { grid-template-columns: minmax(0, 1fr); }
+
+/* Ficha extendida: peso, adjuntos, enlaces */
+.chart { margin: .5rem 0 0; }
+.chart svg { width: 100%; height: auto; display: block; }
+.chart .grid { stroke: var(--linea); stroke-width: 1; }
+.chart .axis { fill: var(--gris); font-size: 12px; font-family: "Nunito", sans-serif; }
+.chart .line { fill: none; stroke: var(--hoja); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.chart .dot { fill: var(--blanco); stroke: var(--cafe); stroke-width: 3; }
+.chart figcaption { font-size: .85rem; color: var(--gris); }
+.attachments { list-style: none; padding: 0; margin: .5rem 0 1rem; display: grid; gap: .75rem; }
+.attachments li { display: flex; gap: .9rem; align-items: center; }
+.attachments span { display: block; color: var(--gris); font-size: .88rem; overflow-wrap: anywhere; }
+.attachments .links { display: flex; gap: .8rem; margin: .2rem 0 0; }
+.thumb { flex: none; width: 4.5rem; height: 4.5rem; border-radius: 10px; overflow: hidden; background: var(--musgo); border: 1px solid var(--linea); display: grid; place-items: center; text-decoration: none; }
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb .pdf { font-family: "Baloo 2", sans-serif; font-weight: 700; color: var(--peligro); }
+.upload { display: grid; gap: 0 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); align-items: end; border-top: 1px dashed var(--linea); padding-top: 1rem; }
+.linkish { background: none; border: 0; padding: 0; color: var(--hoja); text-decoration: underline; font-weight: 600; cursor: pointer; }
+.linkish:hover { background: none; color: var(--bosque); }
+.copy-link { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; }
+.copy-link input { flex: 1 1 18rem; font-size: .9rem; background: var(--musgo); }
+.copy-link form { margin: 0; }
+.tag.confirmada, .tag.autorizado { background: var(--brote); color: var(--bosque); }
+.tag.rechazado, .tag.no_asistio { background: var(--peligro-claro); color: var(--peligro); }
+
+/* Páginas para el tutor */
+.tutor-card { max-width: 34rem; margin: 2rem auto; padding: 1.5rem; }
+.tutor-card.wide { max-width: 50rem; }
+.tutor-logo { display: block; width: 12rem; height: auto; margin: 0 auto 1rem; }
+.tutor-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 1.25rem; }
+.signature-pad { display: block; width: 100%; max-width: 600px; aspect-ratio: 3 / 1; border: 2px dashed var(--cafe); border-radius: 12px; background: var(--blanco); touch-action: none; cursor: crosshair; }
+.consent-doc h2 { margin-bottom: .2rem; }
+.consent-doc header p { color: var(--gris); }
+.consent-doc .declaration { padding: .8rem 1rem; border-radius: 12px; background: var(--musgo); }
+.signature-box { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--linea); }
+.signature-box img { max-width: 18rem; height: auto; border-bottom: 1px solid var(--tinta); }
+
+/* Estadísticas */
+.kpis { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); margin-bottom: 1.25rem; }
+.kpi { background: var(--blanco); border: 1px solid var(--linea); border-radius: var(--radio); padding: 1rem 1.1rem; }
+.kpi span { display: block; font-weight: 700; color: var(--cafe); font-size: .9rem; }
+.kpi strong { display: block; font-family: "Baloo 2", sans-serif; font-size: 1.9rem; line-height: 1.1; color: var(--bosque); }
+.kpi small { color: var(--gris); }
+.kpi.alert strong { color: var(--peligro); }
+.report-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr)); }
+.columns-chart { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: .6rem; height: 13rem; align-items: end; padding-top: .5rem; }
+.columns-chart .col { display: grid; grid-template-rows: auto 1fr auto; height: 100%; text-align: center; gap: .25rem; }
+.columns-chart .col .bar { align-self: end; background: var(--hoja); border-radius: 8px 8px 0 0; min-height: 3px; }
+.columns-chart .value { font-size: .72rem; color: var(--gris); }
+.columns-chart .label { font-size: .8rem; font-weight: 700; color: var(--cafe); }
+.bars { list-style: none; padding: 0; margin: .5rem 0 0; display: grid; gap: .65rem; }
+.bars li { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) auto; gap: .7rem; align-items: center; }
+.bars .name { font-weight: 600; overflow-wrap: anywhere; }
+.bars .name small { display: block; font-weight: 400; color: var(--gris); font-size: .8rem; }
+.bars .track { height: .7rem; border-radius: 999px; background: var(--musgo); overflow: hidden; }
+.bars .fill { display: block; height: 100%; background: var(--hoja); border-radius: 999px; }
+.bars .fill.cafe { background: var(--cafe); }
+.bars .num { font-size: .85rem; color: var(--gris); white-space: nowrap; }
+.choice { border: 1px solid var(--linea); border-radius: 12px; padding: .6rem 1rem; margin: 0 0 1rem; }
+.choice legend { font-weight: 700; color: var(--bosque); padding: 0 .3rem; }
+.choice label { display: block; font-weight: 600; margin: .35rem 0; }
+.choice label input { display: inline; width: auto; margin-right: .4rem; }
+.choice label span { display: block; font-weight: 400; color: var(--gris); font-size: .88rem; margin-left: 1.5rem; }
+
+@media print {
+    .sidebar, .no-print, .skip, .notice { display: none !important; }
+    .with-sidebar { display: block; }
+    .content { padding: 0; max-width: none; }
+    .panel { border: 0; padding: 0; }
+    body { background: #fff; }
+}

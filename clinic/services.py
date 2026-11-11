@@ -86,6 +86,10 @@ def validate_rules(obj):
     """Business rules shared by the panel, the API and Django Admin."""
     if isinstance(obj, (Cita, Disponibilidad, Atencion)):
         validate_professional_is_active(obj)
+    if isinstance(obj, Atencion) and obj.servicio_id and not obj.servicio.activo:
+        previous = Atencion.objects.filter(pk=obj.pk).values_list("servicio_id", flat=True).first()
+        if previous != obj.servicio_id:
+            raise ValidationError({"servicio": "Ese servicio está inactivo."})
     if isinstance(obj, Profesional) and obj.pk and not obj.activo:
         pending = upcoming_appointments(obj).count()
         if pending:
@@ -125,6 +129,8 @@ def save_record(obj, *, user, changed_fields=None):
         obj.enviar_el = reminder_send_date(obj.fecha_objetivo, obj.anticipacion_dias)
     if isinstance(obj, Movimiento):
         obj.registrado_por = user
+    if isinstance(obj, Atencion) and obj.monto is None and obj.servicio_id:
+        obj.monto = obj.servicio.precio
 
     obj.full_clean()
     validate_rules(obj)

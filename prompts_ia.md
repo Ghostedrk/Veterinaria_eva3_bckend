@@ -59,6 +59,8 @@ Las decisiones de alcance, el nombre, el logo y la validación final de cada flu
 
 | «podríamos crear alguna cuenta que restringa unas cuantas opciones como crear y eliminar profesionales quizá, hacer pedidos» y «que no eliminar si no dejar como inactivo» | Rol Recepción (grupo de Django) sin gestión de profesionales, compras ni Django Admin, aplicado en el panel, la API y el Admin. Selección de rol al crear cuentas. Profesionales con estado activo/inactivo en vez de eliminación, con bloqueo si tienen citas por delante | `clinic/roles.py`, `clinic/views.py`, `clinic/services.py`, `clinic/admin.py`, `clinic/api.py` y `clinic/migrations/0003_profesional_activo_y_recepcion.py` |
 
+| «Eso podrías agregarlo?» (adjuntos, control de peso, consentimientos, confirmación de citas por enlace, dashboard de Jefatura y exportación PDF/Excel) | Catálogo de servicios con precio y monto por atención, estado "No asistió", adjuntos validados y privados, curva de peso en SVG, enlaces firmados sin login para citas y consentimientos con firma en pantalla, aviso automático 24 horas antes, dashboard de métricas y reportes con reportlab y openpyxl | `clinic/clinical_views.py`, `clinic/tutor.py`, `clinic/reports.py`, `clinic/migrations/0004_ficha_extendida_y_reportes.py` y `clinic/test_extended.py` |
+
 ## Criterio propio aplicado
 
 - Se descartó exponer PostgreSQL a Internet. La base solo escucha en `127.0.0.1` dentro de la instancia.

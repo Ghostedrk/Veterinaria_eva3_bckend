@@ -6,8 +6,8 @@ from django.db.models import Count, F
 from django.utils import timezone
 from django.utils.html import format_html
 
-from .models import (Atencion, Cita, Disponibilidad, Insumo, ItemOrden, Mascota, Movimiento, OrdenCompra,
-                     Profesional, Recordatorio, Tutor)
+from .models import (Adjunto, Atencion, Cita, Consentimiento, Disponibilidad, Insumo, ItemOrden, Mascota,
+                     Movimiento, OrdenCompra, Profesional, Recordatorio, Servicio, Tutor)
 from . import roles
 from .services import (affected_appointments, delete_record, reminder_send_date, save_record,
                        set_professional_active, validate_rules)
@@ -225,13 +225,14 @@ class DisponibilidadAdmin(ClinicAdmin):
 
 @admin.register(Cita)
 class CitaAdmin(ClinicAdmin):
-    list_display = ("inicio", "fin", "mascota", "tutor", "profesional", "motivo", "estado_badge")
-    list_filter = ("estado", "profesional", ("inicio", admin.DateFieldListFilter))
+    list_display = ("inicio", "fin", "mascota", "tutor", "profesional", "motivo", "estado_badge", "respuesta_tutor")
+    list_filter = ("estado", "respuesta_tutor", "profesional", ("inicio", admin.DateFieldListFilter))
+    readonly_fields = ("respuesta_tutor", "respondida_en", "aviso_enviado_en")
     search_fields = ("mascota__nombre", "mascota__tutor__nombre", "profesional__nombre", "motivo")
     list_select_related = ("mascota__tutor", "profesional")
     autocomplete_fields = ("mascota", "profesional")
     date_hierarchy = "inicio"
-    actions = ("marcar_atendida", "marcar_cancelada")
+    actions = ("marcar_atendida", "marcar_no_asistio", "marcar_cancelada")
 
     @admin.display(description="Tutor", ordering="mascota__tutor__nombre")
     def tutor(self, obj):
@@ -239,7 +240,7 @@ class CitaAdmin(ClinicAdmin):
 
     @admin.display(description="Estado", ordering="estado")
     def estado_badge(self, obj):
-        tone = {"agendada": "info", "atendida": "ok", "cancelada": "muted"}[obj.estado]
+        tone = {"agendada": "info", "atendida": "ok", "cancelada": "muted", "no_asistio": "warn"}[obj.estado]
         return badge(obj.get_estado_display(), tone)
 
     def change_state(self, request, queryset, state):
@@ -258,6 +259,10 @@ class CitaAdmin(ClinicAdmin):
     def marcar_atendida(self, request, queryset):
         self.change_state(request, queryset, Cita.Estado.ATENDIDA)
 
+    @admin.action(description="Marcar como no asistió")
+    def marcar_no_asistio(self, request, queryset):
+        self.change_state(request, queryset, Cita.Estado.NO_ASISTIO)
+
     @admin.action(description="Cancelar citas seleccionadas")
     def marcar_cancelada(self, request, queryset):
         self.change_state(request, queryset, Cita.Estado.CANCELADA)
@@ -265,16 +270,25 @@ class CitaAdmin(ClinicAdmin):
 
 @admin.register(Atencion)
 class AtencionAdmin(ClinicAdmin):
-    list_display = ("fecha", "mascota", "profesional", "resumen")
-    list_filter = ("profesional", "fecha")
+    list_display = ("fecha", "mascota", "profesional", "servicio", "monto_clp", "peso_kg", "resumen")
+    list_filter = ("servicio", "profesional", "fecha")
     search_fields = ("mascota__nombre", "mascota__tutor__nombre", "profesional__nombre", "diagnostico")
     list_select_related = ("mascota__tutor", "profesional")
-    autocomplete_fields = ("mascota", "profesional")
+    autocomplete_fields = ("mascota", "profesional", "servicio")
     date_hierarchy = "fecha"
     fieldsets = (
-        ("Paciente", {"fields": ("mascota", "profesional", "fecha")}),
+        ("Paciente", {"fields": ("mascota", "profesional", "fecha", "peso_kg")}),
         ("Ficha clínica", {"fields": ("diagnostico", "tratamiento", "receta", "examenes")}),
+        ("Cobro", {"fields": ("servicio", "monto")}),
     )
+    inlines = []
+
+    def get_inlines(self, request, obj):
+        return [AdjuntoInline] if obj else []
+
+    @admin.display(description="Monto", ordering="monto")
+    def monto_clp(self, obj):
+        return f"${obj.monto:,}".replace(",", ".") if obj.monto is not None else "—"
 
     @admin.display(description="Diagnóstico")
     def resumen(self, obj):
@@ -397,6 +411,59 @@ class OrdenCompraAdmin(ClinicAdmin):
     def estado_badge(self, obj):
         tone = {"borrador": "info", "pendiente": "warn", "pagada": "ok", "rechazada": "warn", "anulada": "muted"}
         return badge(obj.get_estado_display(), tone[obj.estado])
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+class AdjuntoInline(ReadOnlyInline):
+    model = Adjunto
+    fields = ("tipo", "descripcion", "nombre_original", "subido_en", "subido_por")
+    show_change_link = False
+
+
+@admin.register(Servicio)
+class ServicioAdmin(ClinicAdmin):
+    list_display = ("nombre", "precio_clp", "activo", "total_atenciones")
+    list_filter = ("activo",)
+    search_fields = ("nombre",)
+    list_editable = ("activo",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(n=Count("atenciones"))
+
+    @admin.display(description="Precio", ordering="precio")
+    def precio_clp(self, obj):
+        return f"${obj.precio:,}".replace(",", ".")
+
+    @admin.display(description="Atenciones", ordering="n")
+    def total_atenciones(self, obj):
+        return obj.n
+
+
+@admin.register(Consentimiento)
+class ConsentimientoAdmin(ClinicAdmin):
+    """Read-only: the tutor signs from the link, so the signed record can't be altered here."""
+
+    list_display = ("procedimiento", "mascota", "profesional", "fecha_procedimiento", "estado_badge", "respondido_en")
+    list_filter = ("estado", "procedimiento", "profesional")
+    search_fields = ("mascota__nombre", "mascota__tutor__nombre", "firmante_nombre")
+    list_select_related = ("mascota", "profesional")
+    date_hierarchy = "fecha_procedimiento"
+    fields = ("mascota", "profesional", "procedimiento", "fecha_procedimiento", "descripcion", "riesgos", "estado",
+              "firmante_nombre", "firmante_rut", "respondido_en", "ip_firma", "creado_por", "creado_en")
+    readonly_fields = fields
+
+    @admin.display(description="Estado", ordering="estado")
+    def estado_badge(self, obj):
+        tone = {"pendiente": "warn", "autorizado": "ok", "rechazado": "muted"}[obj.estado]
+        return badge(obj.get_estado_display(), tone)
 
     def has_add_permission(self, request):
         return False

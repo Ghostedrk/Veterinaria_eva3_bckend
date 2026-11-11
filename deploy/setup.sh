@@ -49,6 +49,8 @@ PGUSER=petcare
 PGPASSWORD=$DB_PASS
 EOF
 fi
+grep -q '^PETCARE_MEDIA_ROOT=' "$ENV_FILE" || echo "PETCARE_MEDIA_ROOT=/var/lib/petcare/media" >> "$ENV_FILE"
+install -d -o petcare -g petcare -m 750 /var/lib/petcare /var/lib/petcare/media
 chown root:petcare "$ENV_FILE"
 chmod 640 "$ENV_FILE"
 set -a

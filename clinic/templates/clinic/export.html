@@ -1,0 +1,25 @@
+{% extends "clinic/base.html" %}
+{% block title %}Exportar reportes{% endblock %}
+{% block content %}
+<section class="panel form-panel">
+    <h1>Exportar reportes</h1>
+    <p class="subtitle">Descarga la información del período en PDF o Excel.</p>
+    <form method="get" action="{% url 'reports-export' %}">
+        <div class="order-head">
+            <p><label for="desde">Desde</label><input id="desde" type="date" name="desde" value="{{ start|date:'Y-m-d' }}" required></p>
+            <p><label for="hasta">Hasta</label><input id="hasta" type="date" name="hasta" value="{{ end|date:'Y-m-d' }}" required></p>
+        </div>
+        <fieldset class="choice">
+            <legend>Reporte</legend>
+            <label><input type="radio" name="tipo" value="clinico" checked> Clínico <span>Atenciones con diagnóstico, tratamiento, receta, exámenes y peso.</span></label>
+            <label><input type="radio" name="tipo" value="contable"> Contable <span>Ingresos por atenciones y egresos por compras pagadas, con totales.</span></label>
+        </fieldset>
+        <fieldset class="choice">
+            <legend>Formato</legend>
+            <label><input type="radio" name="formato" value="pdf" checked> PDF</label>
+            <label><input type="radio" name="formato" value="xlsx"> Excel (.xlsx)</label>
+        </fieldset>
+        <div class="links"><button>Descargar</button>{% if user.is_superuser %}<a href="{% url 'reports' %}">Ver estadísticas</a>{% endif %}</div>
+    </form>
+</section>
+{% endblock %}

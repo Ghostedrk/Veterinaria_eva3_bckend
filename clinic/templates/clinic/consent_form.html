@@ -1,0 +1,30 @@
+{% extends "clinic/base.html" %}
+{% block title %}Nuevo consentimiento{% endblock %}
+{% block content %}
+<a class="back" href="{% url 'consent-list' %}">Volver a consentimientos</a>
+<section class="panel form-panel">
+    <h1>Nuevo consentimiento informado</h1>
+    <p class="subtitle">Al guardarlo obtendrás un enlace para que el tutor lo lea y firme, en la clínica o desde su teléfono.</p>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <div class="links">
+            <button>Crear consentimiento</button>
+            <a href="{% url 'consent-list' %}">Cancelar</a>
+        </div>
+    </form>
+</section>
+{{ risks|json_script:"consent-risks" }}
+<script>
+(function () {
+    var risks = JSON.parse(document.getElementById("consent-risks").textContent);
+    var select = document.getElementById("id_procedimiento");
+    var text = document.getElementById("id_riesgos");
+    if (!select || !text) return;
+    select.addEventListener("change", function () {
+        var known = Object.values(risks);
+        if (!text.value.trim() || known.indexOf(text.value) !== -1) text.value = risks[select.value] || "";
+    });
+})();
+</script>
+{% endblock %}

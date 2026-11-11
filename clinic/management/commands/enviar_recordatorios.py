@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
-from clinic.models import Recordatorio
+from clinic.models import Cita, Recordatorio
 from clinic.services import reminder_send_date
 
 
@@ -32,7 +32,36 @@ class Command(BaseCommand):
         except KeyboardInterrupt:
             self.stdout.write("Procesamiento detenido.")
 
+    def process_appointments(self):
+        """Avisa al tutor 24 horas antes de su cita, con el enlace para confirmar o cancelar."""
+        from clinic import tutor
+
+        now = timezone.now()
+        pending = Cita.objects.filter(
+            estado=Cita.Estado.AGENDADA, aviso_enviado_en__isnull=True, respuesta_tutor="",
+            inicio__gt=now, inicio__lte=now + timedelta(hours=24),
+        ).select_related("mascota__tutor", "profesional")
+        failures = 0
+        for cita in pending:
+            url = tutor.appointment_url(cita)
+            if not url:
+                self.stderr.write("Configura PETCARE_SITE_URL para enviar los avisos de citas.")
+                return 0
+            try:
+                tutor.send_appointment_link(cita, url)
+            except (OSError, RuntimeError) as exc:
+                failures += 1
+                self.stderr.write(f"Aviso de cita {cita.pk} pendiente ({type(exc).__name__}).")
+                continue
+            Cita.objects.filter(pk=cita.pk).update(aviso_enviado_en=timezone.now())
+            self.stdout.write(f"Aviso de cita {cita.pk} enviado.")
+        return failures
+
     def process_pending(self):
+        failures = self.process_appointments()
+        return failures + self.process_reminders()
+
+    def process_reminders(self):
         today = timezone.localdate()
         pending = list(Recordatorio.objects.filter(
             enviar_el__lte=today, enviado_en__isnull=True,

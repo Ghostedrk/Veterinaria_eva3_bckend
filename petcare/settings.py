@@ -66,6 +66,13 @@ TIME_ZONE = "America/Santiago"
 USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# Adjuntos clínicos: fuera de /static/ y servidos solo por Django a usuarios con sesión.
+MEDIA_ROOT = Path(os.getenv("PETCARE_MEDIA_ROOT", BASE_DIR / "media"))
+MEDIA_URL = "/adjuntos/"
+ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # Firma de consentimientos (PNG en base64).
+# URL pública para los enlaces que reciben los tutores por correo.
+SITE_URL = os.getenv("PETCARE_SITE_URL", "").rstrip("/")
 if not DEBUG:
     # Nombres con hash (panel.3f2a1c.css): el navegador los guarda por un año y
     # descarga la versión nueva solo cuando el archivo cambia.
@@ -87,6 +94,8 @@ SESSION_COOKIE_AGE = int(os.getenv("PETCARE_SESSION_SECONDS", str(8 * 3600)))
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 CSRF_TRUSTED_ORIGINS = [o for o in os.getenv("PETCARE_CSRF_ORIGINS", "").split(",") if o]
+if not SITE_URL and CSRF_TRUSTED_ORIGINS:
+    SITE_URL = CSRF_TRUSTED_ORIGINS[0].rstrip("/")
 if os.getenv("PETCARE_TRUST_PROXY") == "1":
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 

@@ -1,4 +1,5 @@
 from datetime import datetime, time, timedelta
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
@@ -6,7 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from clinic.models import (Atencion, Cita, Disponibilidad, Insumo, Mascota, Movimiento, Profesional,
-                           Recordatorio, Tutor)
+                           Recordatorio, Servicio, Tutor)
 from clinic.services import save_record
 
 # Correos en el dominio reservado example.test: los recordatorios nunca llegan a personas reales.
@@ -53,18 +54,40 @@ INSUMOS = [  # (código, nombre, categoría, unidad, mínimo, entrada inicial, s
 ]
 
 
+SERVICIOS = [
+    ("Consulta general", 18000), ("Vacunación", 15000), ("Control post operatorio", 12000),
+    ("Dermatología", 25000), ("Cirugía menor", 85000), ("Limpieza dental", 45000), ("Radiografía", 30000),
+]
+# Palabras del diagnóstico que indican qué servicio corresponde a una atención existente.
+KEYWORDS = [("dental", "Limpieza dental"), ("gingiv", "Limpieza dental"), ("esteriliz", "Cirugía menor"),
+            ("fractura", "Radiografía"), ("dermat", "Dermatología"), ("otitis", "Consulta general")]
+# Historial de peso mensual (kg) para que se vea la curva de crecimiento.
+PESOS = {0: [3.1, 3.4, 3.8, 4.0, 4.1, 4.2], 2: [7.5, 8.6, 9.8, 10.9, 11.6, 12.1], 5: [27.0, 28.1, 29.4, 30.0, 30.6, 31.2]}
+
+
 class Command(BaseCommand):
-    help = "Carga datos de ejemplo para la demostración (solo si la base no tiene tutores)."
+    help = ("Carga datos de ejemplo para la demostración. Si la base ya tiene datos, solo agrega lo que falta "
+            "(servicios, montos, pesos e historial) sin duplicar registros.")
 
     def handle(self, *args, **options):
-        if Tutor.objects.exists():
-            self.stdout.write("La base ya tiene datos. No se cargó nada para no duplicar registros.")
-            return
         user = get_user_model().objects.filter(is_superuser=True, is_active=True).order_by("pk").first()
         if user is None:
             raise CommandError("Primero crea la cuenta de Jefatura con createsuperuser.")
+        if Tutor.objects.exists():
+            if Servicio.objects.exists():
+                self.stdout.write("La base ya tiene datos de demostración completos. No se cargó nada.")
+                return
+            with transaction.atomic():
+                self.complement(user)
+            self.stdout.write(self.style.SUCCESS(
+                f"Datos existentes completados: {Servicio.objects.count()} servicios, "
+                f"{Atencion.objects.filter(monto__isnull=False).count()} atenciones con monto y "
+                f"{Atencion.objects.filter(peso_kg__isnull=False).count()} registros de peso."
+            ))
+            return
         with transaction.atomic():
             self.load(user)
+            self.complement(user)
         self.stdout.write(self.style.SUCCESS(
             f"Datos de demostración cargados: {Tutor.objects.count()} tutores, "
             f"{Mascota.objects.count()} mascotas, {Cita.objects.count()} citas, "
@@ -130,3 +153,31 @@ class Command(BaseCommand):
             item = Insumo.objects.create(codigo=code, nombre=name, categoria=category, unidad=unit, minimo=minimum)
             save_record(Movimiento(insumo=item, tipo="entrada", cantidad=entry, motivo="Compra a proveedor"), user=user)
             save_record(Movimiento(insumo=item, tipo="salida", cantidad=used, motivo="Uso en atenciones"), user=user)
+
+    def complement(self, user):
+        """Servicios con precio, cobros, pesos e inasistencias para el dashboard y las curvas."""
+        today = timezone.localdate()
+        services = {name: Servicio.objects.get_or_create(nombre=name, defaults={"precio": price})[0]
+                    for name, price in SERVICIOS}
+        for visit in Atencion.objects.filter(servicio__isnull=True):
+            text = visit.diagnostico.lower()
+            name = next((service for word, service in KEYWORDS if word in text), "Consulta general")
+            Atencion.objects.filter(pk=visit.pk).update(servicio=services[name], monto=services[name].precio)
+
+        pets = list(Mascota.objects.order_by("pk"))
+        vets = list(Profesional.objects.filter(activo=True).order_by("pk")) or list(Profesional.objects.all())
+        for index, weights in PESOS.items():
+            if index >= len(pets) or not vets:
+                continue
+            for months_ago, weight in zip(range(len(weights) - 1, -1, -1), weights):
+                day = today - timedelta(days=30 * months_ago + 3)
+                service = services["Vacunación" if months_ago % 2 else "Consulta general"]
+                save_record(Atencion(mascota=pets[index], profesional=vets[months_ago % len(vets)], fecha=day,
+                                     servicio=service, peso_kg=Decimal(str(weight)),
+                                     diagnostico="Control de rutina: peso y condición corporal adecuados.",
+                                     tratamiento="Mantener alimentación y actividad."), user=user)
+
+        # Algunas citas pasadas quedan como inasistencia para la tasa de no-show.
+        past = Cita.objects.filter(estado=Cita.Estado.ATENDIDA, fin__lt=timezone.now()).order_by("pk")
+        for cita in past[::5]:
+            Cita.objects.filter(pk=cita.pk).update(estado=Cita.Estado.NO_ASISTIO)

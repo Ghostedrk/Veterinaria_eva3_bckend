@@ -71,6 +71,8 @@ def field_value(obj, name):
     value = display() if display else getattr(obj, name)
     if isinstance(value, bool):
         return "Sí" if value else "No"
+    if name in ("monto", "precio") and isinstance(value, int):
+        return f"${value:,}".replace(",", ".")
     if isinstance(value, datetime):
         return timezone.localtime(value).strftime("%d/%m/%Y %H:%M")
     if isinstance(value, date):
@@ -166,7 +168,9 @@ def record_detail(request, slug, pk):
     resource = resource_for(slug)
     obj = get_object_or_404(resource.queryset(), pk=pk)
     names = dict.fromkeys((*resource.fields, *resource.columns))
+    from .clinical_views import detail_extras  # Import diferido: clinical_views importa este módulo.
     return render(request, "clinic/detail.html", {
+        **detail_extras(request, obj),
         "resource": resource, "slug": slug, "object": obj,
         "readonly": is_readonly(resource, obj),
         "can_edit": slug not in roles.READ_ONLY_FOR_RECEPTION or roles.is_full_staff(request.user),

@@ -33,10 +33,13 @@
         <a href="{% url 'calendar' %}"{% if "/agenda/" in p or "/gestion/citas/" in p or "/gestion/disponibilidad/" in p or "/gestion/profesionales/" in p %} aria-current="page"{% endif %}>Agenda</a>
         <a href="{% url 'record-list' 'tutores' %}"{% if "/gestion/tutores/" in p %} aria-current="page"{% endif %}>Tutores</a>
         <a href="{% url 'record-list' 'mascotas' %}"{% if "/gestion/mascotas/" in p %} aria-current="page"{% endif %}>Mascotas</a>
-        <a href="{% url 'record-list' 'atenciones' %}"{% if "/gestion/atenciones/" in p %} aria-current="page"{% endif %}>Fichas clínicas</a>
+        <a href="{% url 'record-list' 'atenciones' %}"{% if "/gestion/atenciones/" in p or "/gestion/servicios/" in p %} aria-current="page"{% endif %}>Fichas clínicas</a>
+        <a href="{% url 'consent-list' %}"{% if "/consentimientos/" in p %} aria-current="page"{% endif %}>Consentimientos</a>
         <a href="{% url 'record-list' 'recordatorios' %}"{% if "/gestion/recordatorios/" in p %} aria-current="page"{% endif %}>Recordatorios</a>
         <a href="{% url 'record-list' 'insumos' %}"{% if "/gestion/insumos/" in p or "/gestion/movimientos/" in p %} aria-current="page"{% endif %}>Inventario</a>
         {% if can_purchase %}<a href="{% url 'purchase-list' %}"{% if "/compras/" in p %} aria-current="page"{% endif %}>Compras</a>{% endif %}
+        {% if user.is_superuser %}<a href="{% url 'reports' %}"{% if "/estadisticas/" in p %} aria-current="page"{% endif %}>Estadísticas</a>
+        {% elif can_use_admin %}<a href="{% url 'reports-export-form' %}"{% if "/reportes/" in p %} aria-current="page"{% endif %}>Reportes</a>{% endif %}
         {% if user.is_superuser %}<a href="{% url 'accounts' %}"{% if "/cuentas/" in p %} aria-current="page"{% endif %}>Cuentas</a>{% endif %}
         {% if can_use_admin %}<a href="{% url 'admin:index' %}">Django Admin</a>{% endif %}
         {% endwith %}

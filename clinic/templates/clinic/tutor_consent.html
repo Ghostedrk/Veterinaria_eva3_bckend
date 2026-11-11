@@ -1,0 +1,55 @@
+{% extends "clinic/base.html" %}
+{% load static %}
+{% block title %}Consentimiento informado{% endblock %}
+{% block content %}
+<section class="panel tutor-card wide">
+    <img class="tutor-logo" src="{% static 'clinic/logo.webp' %}" alt="Veterinaria San Francisco" width="480" height="240">
+    {% include "clinic/consent_document.html" %}
+    {% if error %}<p class="notice error" role="alert">{{ error }}</p>{% endif %}
+    {% if consent.estado == "pendiente" %}
+    <form method="post" id="consent-form" class="sign-form">
+        {% csrf_token %}
+        <p><label for="nombre">Nombre completo del tutor</label><input id="nombre" name="nombre" required maxlength="150" value="{{ request.POST.nombre }}" autocomplete="name"></p>
+        <p><label for="rut">RUT (opcional)</label><input id="rut" name="rut" maxlength="12" value="{{ request.POST.rut }}" placeholder="12.345.678-9"></p>
+        <p><label for="firma-canvas">Firma</label>
+            <canvas id="firma-canvas" class="signature-pad" width="600" height="200" aria-label="Dibuja tu firma con el dedo o el mouse"></canvas>
+            <span class="helptext">Dibuja tu firma con el dedo o el mouse. <button type="button" class="linkish" id="limpiar">Borrar firma</button></span>
+        </p>
+        <input type="hidden" name="firma" id="firma">
+        <div class="tutor-actions">
+            <button name="respuesta" value="autorizar">Autorizar y firmar</button>
+            <button class="secondary" name="respuesta" value="rechazar" formnovalidate>No autorizo</button>
+        </div>
+    </form>
+    <script>
+    (function () {
+        var canvas = document.getElementById("firma-canvas"), ctx = canvas.getContext("2d"), drawing = false, used = false;
+        ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.strokeStyle = "#1f2b22";
+        function point(e) {
+            var r = canvas.getBoundingClientRect();
+            return [(e.clientX - r.left) * canvas.width / r.width, (e.clientY - r.top) * canvas.height / r.height];
+        }
+        canvas.addEventListener("pointerdown", function (e) {
+            drawing = true; used = true; canvas.setPointerCapture(e.pointerId);
+            var p = point(e); ctx.beginPath(); ctx.moveTo(p[0], p[1]);
+        });
+        canvas.addEventListener("pointermove", function (e) {
+            if (!drawing) return;
+            var p = point(e); ctx.lineTo(p[0], p[1]); ctx.stroke();
+        });
+        ["pointerup", "pointercancel"].forEach(function (t) { canvas.addEventListener(t, function () { drawing = false; }); });
+        document.getElementById("limpiar").addEventListener("click", function () {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); used = false;
+        });
+        document.getElementById("consent-form").addEventListener("submit", function (e) {
+            var accept = e.submitter && e.submitter.value === "autorizar";
+            if (accept && !used) { e.preventDefault(); alert("Dibuja tu firma antes de autorizar."); return; }
+            document.getElementById("firma").value = accept ? canvas.toDataURL("image/png") : "";
+        });
+    })();
+    </script>
+    {% else %}
+    <p class="notice" role="status">Gracias. Tu respuesta quedó registrada en la ficha de {{ consent.mascota.nombre }}.</p>
+    {% endif %}
+</section>
+{% endblock %}

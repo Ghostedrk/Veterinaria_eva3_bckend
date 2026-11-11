@@ -1,4 +1,5 @@
 {% extends "clinic/base.html" %}
+{% load clinic_extras %}
 {% block title %}{{ object }}{% endblock %}
 {% block content %}
 <a class="back" href="{% url 'record-list' slug %}">Volver a {{ resource.title|lower }}</a>
@@ -45,6 +46,30 @@
 {% if pet_profile %}
 <section class="panel related">
     <div class="toolbar">
+        <h2>Control de peso</h2>
+        {% if weight %}<p class="subtitle">Último registro: <strong>{{ weight.last }} kg</strong>{% if weight.count > 1 %} · {% if weight.change > 0 %}+{% endif %}{{ weight.change }} kg desde el primer control{% endif %}</p>{% endif %}
+    </div>
+    {% if weight %}
+    <figure class="chart">
+        <svg viewBox="0 0 {{ weight.width }} {{ weight.height }}" role="img" aria-label="Evolución del peso de {{ object.nombre }}">
+            {% for tick in weight.yticks %}
+            <line class="grid" x1="{{ weight.left }}" x2="{{ weight.right }}" y1="{{ tick.y }}" y2="{{ tick.y }}"/>
+            <text class="axis" x="{{ weight.left|add:'-8' }}" y="{{ tick.y }}" text-anchor="end" dominant-baseline="middle">{{ tick.label }}</text>
+            {% endfor %}
+            {% for label in weight.xlabels %}<text class="axis" x="{{ label.x }}" y="{{ weight.bottom|add:'22' }}" text-anchor="{{ label.anchor }}">{{ label.fecha|date:"d/m/y" }}</text>{% endfor %}
+            <polyline class="line" points="{{ weight.points }}"/>
+            {% for dot in weight.dots %}<circle class="dot" cx="{{ dot.x }}" cy="{{ dot.y }}" r="5"><title>{{ dot.fecha|date:"d/m/Y" }}: {{ dot.peso }} kg</title></circle>{% endfor %}
+        </svg>
+        <figcaption>Peso en kg registrado en cada atención.</figcaption>
+    </figure>
+    {% else %}
+    <p class="trail-empty">Registra el peso en la próxima atención para ver su curva de evolución.</p>
+    {% endif %}
+</section>
+{% endif %}
+{% if pet_profile %}
+<section class="panel related">
+    <div class="toolbar">
         <h2>Ficha clínica</h2>
         <div class="links">
             <a href="{% url 'record-create' 'citas' %}?mascota={{ object.pk }}">Agendar cita</a>
@@ -59,12 +84,79 @@
             <svg class="paw" aria-hidden="true"><use href="#paw"/></svg>
             <time datetime="{{ visit.fecha|date:'Y-m-d' }}">{{ visit.fecha|date:"d/m/Y" }}</time>
             <a href="{% url 'record-detail' 'atenciones' visit.pk %}">{{ visit.diagnostico|truncatechars:80 }}</a>
-            <span class="meta">{{ visit.profesional }}</span>
+            <span class="meta">{{ visit.profesional }}{% if visit.peso_kg %} · {{ visit.peso_kg }} kg{% endif %}</span>
             {% if visit.tratamiento %}<span class="note">Tratamiento: {{ visit.tratamiento|truncatechars:110 }}</span>{% endif %}
         </li>
     {% endfor %}
     </ol>
     {% else %}<p class="trail-empty">Aún no hay atenciones registradas.</p>{% endif %}
 </section>
+{% endif %}
+{% if pet_profile %}
+<section class="panel related">
+    <div class="toolbar">
+        <h2>Consentimientos informados</h2>
+        <a class="button secondary" href="{% url 'consent-create' %}?mascota={{ object.pk }}">Nuevo consentimiento</a>
+    </div>
+    <ul class="plain">
+    {% for consent in consents %}
+        <li><a href="{% url 'consent-detail' consent.pk %}">{{ consent.get_procedimiento_display }} · {{ consent.fecha_procedimiento|date:"d/m/Y" }}</a> <span class="tag {{ consent.estado }}">{{ consent.get_estado_display }}</span></li>
+    {% empty %}<li>No hay consentimientos registrados.</li>{% endfor %}
+    </ul>
+</section>
+{% endif %}
+{% if slug == "atenciones" %}
+<section class="panel related">
+    <h2>Archivos adjuntos</h2>
+    {% if attachments %}
+    <ul class="attachments">
+        {% for file in attachments %}
+        <li>
+            <a class="thumb" href="{% url 'attachment-file' file.pk %}" target="_blank" rel="noopener">
+                {% if file.es_imagen %}<img src="{% url 'attachment-file' file.pk %}" alt="" loading="lazy">{% else %}<span class="pdf">PDF</span>{% endif %}
+            </a>
+            <div>
+                <strong>{{ file.get_tipo_display }}</strong>{% if file.descripcion %} · {{ file.descripcion }}{% endif %}
+                <span>{{ file.nombre_original }} · {{ file.tamano|filesizeformat }} · {{ file.subido_en|date:"d/m/Y H:i" }} · {{ file.subido_por }}</span>
+                <span class="links">
+                    <a href="{% url 'attachment-file' file.pk %}?descargar=1">Descargar</a>
+                    {% if can_use_admin %}<form method="post" action="{% url 'attachment-delete' file.pk %}">{% csrf_token %}<button class="linkish">Eliminar</button></form>{% endif %}
+                </span>
+            </div>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}<p class="trail-empty">Sin archivos. Adjunta radiografías, ecografías o resultados de laboratorio.</p>{% endif %}
+    <form method="post" enctype="multipart/form-data" action="{% url 'attachment-upload' object.pk %}" class="upload">
+        {% csrf_token %}
+        <p>{{ attachment_form.tipo.label_tag }}{{ attachment_form.tipo }}</p>
+        <p>{{ attachment_form.descripcion.label_tag }}{{ attachment_form.descripcion }}</p>
+        <p>{{ attachment_form.archivo.label_tag }}{{ attachment_form.archivo }}<span class="helptext">PDF, JPG, PNG o WebP de hasta 10 MB.</span></p>
+        <p><button>Adjuntar archivo</button></p>
+    </form>
+</section>
+{% endif %}
+{% if slug == "citas" and tutor_link %}
+<section class="panel related">
+    <h2>Confirmación del tutor</h2>
+    <p>{% if object.respuesta_tutor %}<span class="tag {{ object.respuesta_tutor }}">{{ object.get_respuesta_tutor_display }}</span> el {{ object.respondida_en|date:"d/m/Y H:i" }}{% else %}El tutor aún no responde.{% endif %}
+    {% if object.aviso_enviado_en %}<span class="subtitle"> Último aviso enviado el {{ object.aviso_enviado_en|date:"d/m/Y H:i" }}.</span>{% endif %}</p>
+    <p class="subtitle">El tutor puede confirmar o cancelar la hora desde este enlace sin iniciar sesión. Se envía solo 24 horas antes de la cita.</p>
+    <div class="copy-link">
+        <input id="tutor-link" type="text" value="{{ tutor_link }}" readonly aria-label="Enlace para el tutor">
+        <button type="button" class="secondary" data-copy="tutor-link">Copiar enlace</button>
+        <form method="post" action="{% url 'appointment-send-link' object.pk %}">{% csrf_token %}<button>Enviar por correo</button></form>
+    </div>
+</section>
+<script>
+document.querySelectorAll("[data-copy]").forEach(function (button) {
+    button.addEventListener("click", function () {
+        var input = document.getElementById(button.dataset.copy);
+        input.select();
+        (navigator.clipboard ? navigator.clipboard.writeText(input.value) : Promise.reject()).catch(function () { document.execCommand("copy"); });
+        button.textContent = "Copiado";
+    });
+});
+</script>
 {% endif %}
 {% endblock %}

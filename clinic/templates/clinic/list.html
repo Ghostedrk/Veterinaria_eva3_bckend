@@ -3,8 +3,15 @@
 {% block content %}
 <div class="toolbar">
     <h1>{{ resource.title }}</h1>
-    {% if slug != "profesionales" or can_manage_professionals %}<a class="button" href="{% url 'record-create' slug %}">{% if slug == "movimientos" %}Registrar movimiento{% else %}Nuevo registro{% endif %}</a>{% endif %}
+    {% if slug != "profesionales" and slug != "servicios" or can_manage_professionals %}<a class="button" href="{% url 'record-create' slug %}">{% if slug == "movimientos" %}Registrar movimiento{% else %}Nuevo registro{% endif %}</a>{% endif %}
 </div>
+{% if slug == "atenciones" or slug == "servicios" %}
+<nav class="links" aria-label="Fichas clínicas">
+    <a href="{% url 'record-list' 'atenciones' %}">Atenciones</a>
+    <a href="{% url 'record-list' 'servicios' %}">Servicios y precios</a>
+    <a href="{% url 'consent-list' %}">Consentimientos</a>
+</nav>
+{% endif %}
 {% if slug == "insumos" or slug == "movimientos" %}
 <nav class="toolbar links" aria-label="Inventario">
     <a href="{% url 'record-list' 'insumos' %}">Insumos</a>

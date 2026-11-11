@@ -1,0 +1,32 @@
+{% extends "clinic/base.html" %}
+{% block title %}{{ consent }}{% endblock %}
+{% block content %}
+<a class="back no-print" href="{% url 'record-detail' 'mascotas' consent.mascota_id %}">Volver a {{ consent.mascota.nombre }}</a>
+<div class="toolbar no-print">
+    <div><h1>{{ consent.get_procedimiento_display }}</h1><p><span class="tag {{ consent.estado }}">{{ consent.get_estado_display }}</span></p></div>
+    <button type="button" class="secondary" onclick="window.print()">Imprimir o guardar PDF</button>
+</div>
+{% if tutor_link %}
+<section class="panel no-print" style="margin-bottom:1.25rem">
+    <h2>Firma del tutor</h2>
+    <p class="subtitle">Envía este enlace al tutor o ábrelo en un tablet de la clínica para que firme. No requiere iniciar sesión.</p>
+    <div class="copy-link">
+        <input id="consent-link" type="text" value="{{ tutor_link }}" readonly aria-label="Enlace de firma">
+        <button type="button" class="secondary" data-copy="consent-link">Copiar enlace</button>
+        <a class="button" href="{{ tutor_link }}" target="_blank" rel="noopener">Firmar en este dispositivo</a>
+    </div>
+</section>
+{% endif %}
+<section class="panel">{% include "clinic/consent_document.html" %}</section>
+<p class="subtitle no-print" style="margin-top:1rem">Creado por {{ consent.creado_por }} el {{ consent.creado_en|date:"d/m/Y H:i" }}.</p>
+<script>
+document.querySelectorAll("[data-copy]").forEach(function (button) {
+    button.addEventListener("click", function () {
+        var input = document.getElementById(button.dataset.copy);
+        input.select();
+        (navigator.clipboard ? navigator.clipboard.writeText(input.value) : Promise.reject()).catch(function () { document.execCommand("copy"); });
+        button.textContent = "Copiado";
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "clinic/base.html" %}
+{% load static %}
+{% block title %}Tu cita{% endblock %}
+{% block content %}
+<section class="panel tutor-card">
+    <img class="tutor-logo" src="{% static 'clinic/logo.webp' %}" alt="Veterinaria San Francisco" width="480" height="240">
+    <h1>Cita de {{ cita.mascota.nombre }}</h1>
+    <dl class="details">
+        <div><dt>Fecha</dt><dd>{{ cita.inicio|date:"l d \d\e F"|capfirst }}</dd></div>
+        <div><dt>Hora</dt><dd>{{ cita.inicio|time:"H:i" }} a {{ cita.fin|time:"H:i" }}</dd></div>
+        <div><dt>Profesional</dt><dd>{{ cita.profesional.nombre }}</dd></div>
+        <div><dt>Motivo</dt><dd>{{ cita.motivo }}</dd></div>
+    </dl>
+    {% if error %}<p class="notice error" role="alert">{{ error }}</p>{% endif %}
+    {% if cita.respuesta_tutor == "confirmada" %}
+    <p class="notice" role="status">Confirmaste esta cita. Te esperamos.</p>
+    {% elif cita.estado == "cancelada" %}
+    <p class="notice" role="status">Esta cita está cancelada. Si quieres agendar otra hora, llama a la clínica.</p>
+    {% endif %}
+    {% if editable %}
+    <form method="post" class="tutor-actions">
+        {% csrf_token %}
+        {% if cita.respuesta_tutor != "confirmada" %}<button name="respuesta" value="confirmar">Confirmar asistencia</button>{% endif %}
+        <button class="danger" name="respuesta" value="cancelar">Cancelar la cita</button>
+    </form>
+    {% endif %}
+</section>
+{% endblock %}

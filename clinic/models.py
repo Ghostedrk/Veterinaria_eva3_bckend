@@ -1,5 +1,7 @@
 from django.conf import settings
-from django.core.validators import MinValueValidator
+from decimal import Decimal
+
+from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -45,6 +47,18 @@ class Profesional(models.Model):
         return self.nombre if self.activo else f"{self.nombre} (inactivo)"
 
 
+class Servicio(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+    precio = models.PositiveIntegerField("Precio (CLP)")
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["-activo", "nombre"]
+
+    def __str__(self):
+        return self.nombre
+
+
 class Disponibilidad(models.Model):
     profesional = models.ForeignKey(Profesional, on_delete=models.PROTECT)
     inicio = models.DateTimeField()
@@ -67,6 +81,12 @@ class Cita(models.Model):
         AGENDADA = "agendada", "Agendada"
         ATENDIDA = "atendida", "Atendida"
         CANCELADA = "cancelada", "Cancelada"
+        NO_ASISTIO = "no_asistio", "No asistió"
+
+    class Respuesta(models.TextChoices):
+        SIN_RESPUESTA = "", "Sin respuesta"
+        CONFIRMADA = "confirmada", "Confirmada por el tutor"
+        CANCELADA = "cancelada", "Cancelada por el tutor"
 
     mascota = models.ForeignKey(Mascota, on_delete=models.PROTECT, related_name="citas")
     profesional = models.ForeignKey(Profesional, on_delete=models.PROTECT)
@@ -74,6 +94,10 @@ class Cita(models.Model):
     fin = models.DateTimeField()
     motivo = models.CharField(max_length=200)
     estado = models.CharField(max_length=10, choices=Estado, default=Estado.AGENDADA)
+    respuesta_tutor = models.CharField("Respuesta del tutor", max_length=10, choices=Respuesta,
+                                       blank=True, default="", editable=False)
+    respondida_en = models.DateTimeField(null=True, blank=True, editable=False)
+    aviso_enviado_en = models.DateTimeField("Aviso al tutor enviado", null=True, blank=True, editable=False)
 
     class Meta:
         ordering = ["inicio", "pk"]
@@ -96,6 +120,11 @@ class Atencion(models.Model):
     tratamiento = models.TextField(blank=True)
     receta = models.TextField("Receta médica", blank=True)
     examenes = models.TextField("Exámenes", blank=True)
+    servicio = models.ForeignKey(Servicio, on_delete=models.PROTECT, null=True, blank=True, related_name="atenciones")
+    monto = models.PositiveIntegerField("Monto cobrado (CLP)", null=True, blank=True,
+                                        help_text="Si lo dejas vacío se usa el precio del servicio.")
+    peso_kg = models.DecimalField("Peso (kg)", max_digits=5, decimal_places=2, null=True, blank=True,
+                                  validators=[MinValueValidator(Decimal("0.01")), MaxValueValidator(Decimal("150"))])
 
     class Meta:
         ordering = ["-fecha", "-pk"]
@@ -226,3 +255,71 @@ class ItemOrden(models.Model):
     @property
     def subtotal(self):
         return self.cantidad * self.precio_unitario
+
+
+def adjunto_path(instance, filename):
+    return f"adjuntos/{timezone.now():%Y/%m}/{filename}"
+
+
+class Adjunto(models.Model):
+    class Tipo(models.TextChoices):
+        RADIOGRAFIA = "radiografia", "Radiografía"
+        ECOGRAFIA = "ecografia", "Ecografía"
+        LABORATORIO = "laboratorio", "Examen de laboratorio"
+        OTRO = "otro", "Otro"
+
+    atencion = models.ForeignKey(Atencion, on_delete=models.CASCADE, related_name="adjuntos")
+    tipo = models.CharField(max_length=12, choices=Tipo, default=Tipo.LABORATORIO)
+    descripcion = models.CharField("Descripción", max_length=150, blank=True)
+    archivo = models.FileField(upload_to=adjunto_path, validators=[
+        FileExtensionValidator(["pdf", "jpg", "jpeg", "png", "webp"])])
+    nombre_original = models.CharField(max_length=150, editable=False)
+    tamano = models.PositiveIntegerField(default=0, editable=False)
+    subido_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+",
+                                   editable=False)
+    subido_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-subido_en", "-pk"]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} · {self.nombre_original}"
+
+    @property
+    def es_imagen(self):
+        return self.nombre_original.lower().rsplit(".", 1)[-1] in {"jpg", "jpeg", "png", "webp"}
+
+
+class Consentimiento(models.Model):
+    class Procedimiento(models.TextChoices):
+        CIRUGIA = "cirugia", "Procedimiento quirúrgico"
+        ANESTESIA = "anestesia", "Anestesia o sedación"
+        EUTANASIA = "eutanasia", "Eutanasia"
+        OTRO = "otro", "Otro procedimiento"
+
+    class Estado(models.TextChoices):
+        PENDIENTE = "pendiente", "Pendiente de firma"
+        AUTORIZADO = "autorizado", "Autorizado"
+        RECHAZADO = "rechazado", "Rechazado"
+
+    mascota = models.ForeignKey(Mascota, on_delete=models.PROTECT, related_name="consentimientos")
+    profesional = models.ForeignKey(Profesional, on_delete=models.PROTECT)
+    procedimiento = models.CharField(max_length=10, choices=Procedimiento)
+    descripcion = models.TextField("Descripción del procedimiento")
+    riesgos = models.TextField("Riesgos informados")
+    fecha_procedimiento = models.DateField("Fecha del procedimiento")
+    estado = models.CharField(max_length=10, choices=Estado, default=Estado.PENDIENTE, editable=False)
+    creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+",
+                                   editable=False)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    firmante_nombre = models.CharField("Nombre del firmante", max_length=150, blank=True, editable=False)
+    firmante_rut = models.CharField("RUT del firmante", max_length=12, blank=True, editable=False)
+    firma = models.TextField(blank=True, editable=False)  # PNG en data URL
+    respondido_en = models.DateTimeField(null=True, blank=True, editable=False)
+    ip_firma = models.GenericIPAddressField(null=True, blank=True, editable=False)
+
+    class Meta:
+        ordering = ["-creado_en", "-pk"]
+
+    def __str__(self):
+        return f"{self.get_procedimiento_display()} · {self.mascota.nombre}"

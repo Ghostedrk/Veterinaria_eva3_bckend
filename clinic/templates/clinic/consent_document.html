@@ -1,0 +1,23 @@
+<article class="consent-doc">
+    <header>
+        <h2>Consentimiento informado · {{ consent.get_procedimiento_display }}</h2>
+        <p>Veterinaria San Francisco</p>
+    </header>
+    <dl class="details">
+        <div><dt>Paciente</dt><dd>{{ consent.mascota.nombre }} ({{ consent.mascota.especie }}{% if consent.mascota.raza %}, {{ consent.mascota.raza }}{% endif %})</dd></div>
+        <div><dt>Tutor</dt><dd>{{ consent.mascota.tutor }}</dd></div>
+        <div><dt>Profesional responsable</dt><dd>{{ consent.profesional.nombre }} · {{ consent.profesional.especialidad }}</dd></div>
+        <div><dt>Fecha del procedimiento</dt><dd>{{ consent.fecha_procedimiento|date:"d/m/Y" }}</dd></div>
+    </dl>
+    <h3>Procedimiento</h3>
+    <p>{{ consent.descripcion|linebreaksbr }}</p>
+    <h3>Riesgos informados</h3>
+    <p>{{ consent.riesgos|linebreaksbr }}</p>
+    <p class="declaration">Declaro haber recibido información clara sobre el procedimiento, sus riesgos y alternativas, y haber podido resolver mis dudas con el equipo veterinario.</p>
+    {% if consent.estado != "pendiente" %}
+    <footer class="signature-box">
+        <p><strong>{{ consent.get_estado_display }}</strong> por {{ consent.firmante_nombre }}{% if consent.firmante_rut %} (RUT {{ consent.firmante_rut }}){% endif %} el {{ consent.respondido_en|date:"d/m/Y H:i" }}.</p>
+        {% if consent.firma %}<img src="{{ consent.firma }}" alt="Firma de {{ consent.firmante_nombre }}">{% endif %}
+    </footer>
+    {% endif %}
+</article>

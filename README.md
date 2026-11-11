@@ -80,6 +80,18 @@ $env:PSYCOPG_IMPL = 'python'
 5. En **Inventario**, crea un insumo y registra entradas y salidas. El historial conserva usuario, fecha y motivo. El inicio muestra insumos con stock igual o inferior al mínimo.
 6. En **Compras**, crea una orden de compra con proveedor, insumos, cantidades y precios. Desde la alerta de stock del inicio, **Pedir compra de reposición** la prellena con los insumos bajo el mínimo. Con **Pagar con Webpay** se abre Webpay Plus de Transbank. Si el pago se aprueba, cada insumo entra al inventario como movimiento de entrada. Si se rechaza o se cancela, la orden queda marcada y se puede reintentar o anular.
 
+## Ficha clínica extendida y reportes
+
+- **Servicios y precios** (`/gestion/servicios/`): cada atención registra el servicio y el monto cobrado. Si el monto se deja vacío, se usa el precio del servicio. Los servicios inactivos no se ofrecen en atenciones nuevas.
+- **Control de peso**: cada atención puede registrar el peso. El perfil de la mascota muestra la curva de evolución.
+- **Archivos adjuntos**: radiografías, ecografías y exámenes (PDF, JPG, PNG o WebP de hasta 10 MB) asociados a la atención. Se valida el contenido real del archivo, se guarda con un nombre aleatorio fuera de la carpeta pública (`PETCARE_MEDIA_ROOT`) y solo lo descarga el personal con sesión.
+- **Confirmación de citas sin login**: cada cita agendada tiene un enlace firmado para que el tutor la confirme o cancele. Se envía por correo desde la cita y también automáticamente 24 horas antes (timer de recordatorios). Las citas pueden marcarse como **No asistió**.
+- **Consentimientos informados** (`/consentimientos/`): para cirugía, anestesia, eutanasia u otros procedimientos. El tutor lo firma desde su enlace con el dedo o el mouse, en la clínica o a distancia. Al firmar queda bloqueado con el nombre, RUT, fecha, IP y la firma. Se puede imprimir o guardar como PDF.
+- **Estadísticas** (`/estadisticas/`, solo Jefatura): ingresos del período y de los últimos 6 meses, ticket promedio, compras, ocupación de agenda por profesional y especialidad, ranking de servicios y tasa de inasistencia.
+- **Exportación** (`/reportes/`, Jefatura y Administración): reporte clínico y reporte contable por rango de fechas, en PDF o Excel.
+
+Los enlaces de tutores usan `PETCARE_SITE_URL`, o el dominio de `PETCARE_CSRF_ORIGINS` si existe. Vencen a los 90 días y no permiten acceder a otros datos.
+
 ## Pagos con Webpay (simulados)
 
 El pago usa el **ambiente de integración** de Transbank: la página de Webpay es la real, pero con tarjetas de prueba y sin dinero real. Las credenciales públicas de integración vienen configuradas por defecto en `petcare/settings.py`, así que no hay que configurar nada. El servidor necesita salida a Internet hacia `webpay3gint.transbank.cl`.

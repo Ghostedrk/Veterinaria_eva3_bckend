@@ -7,14 +7,15 @@ from . import models
 
 
 class ActiveProfessionalForm(ModelForm):
-    """Only active professionals are offered; an existing record keeps its current one."""
+    """Only active professionals and services are offered; an existing record keeps its current one."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        field = self.fields.get("profesional")
-        if field is not None:
-            current = getattr(self.instance, "profesional_id", None)
-            field.queryset = models.Profesional.objects.filter(Q(activo=True) | Q(pk=current))
+        for name, model in (("profesional", models.Profesional), ("servicio", models.Servicio)):
+            field = self.fields.get(name)
+            if field is not None:
+                current = getattr(self.instance, f"{name}_id", None)
+                field.queryset = model.objects.filter(Q(activo=True) | Q(pk=current))
 
 
 @dataclass(frozen=True)
@@ -59,12 +60,16 @@ RESOURCES = {
         ("profesional__nombre",), ("profesional",)),
     "citas": Resource(models.Cita, "Citas",
         ("mascota", "profesional", "inicio", "fin", "motivo", "estado"),
-        ("inicio", "fin", "mascota", "profesional", "estado"),
+        ("inicio", "fin", "mascota", "profesional", "estado", "respuesta_tutor"),
         ("mascota__nombre", "profesional__nombre", "motivo"), ("mascota__tutor", "profesional")),
     "atenciones": Resource(models.Atencion, "Atenciones clínicas",
-        ("mascota", "profesional", "fecha", "diagnostico", "tratamiento", "receta", "examenes"),
-        ("fecha", "mascota", "profesional", "diagnostico"),
-        ("mascota__nombre", "profesional__nombre", "diagnostico"), ("mascota__tutor", "profesional")),
+        ("mascota", "profesional", "fecha", "servicio", "monto", "peso_kg", "diagnostico", "tratamiento",
+         "receta", "examenes"),
+        ("fecha", "mascota", "profesional", "servicio", "diagnostico"),
+        ("mascota__nombre", "profesional__nombre", "diagnostico", "servicio__nombre"),
+        ("mascota__tutor", "profesional", "servicio")),
+    "servicios": Resource(models.Servicio, "Servicios y precios",
+        ("nombre", "precio", "activo"), ("nombre", "precio", "activo"), ("nombre",)),
     "recordatorios": Resource(models.Recordatorio, "Recordatorios",
         ("mascota", "tipo", "detalle", "fecha_objetivo", "anticipacion_dias", "repetir_dias"),
         ("enviar_el", "mascota", "tipo", "detalle", "enviado_en"),

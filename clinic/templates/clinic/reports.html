@@ -1,0 +1,75 @@
+{% extends "clinic/base.html" %}
+{% load clinic_extras %}
+{% block title %}Estadísticas{% endblock %}
+{% block content %}
+<div class="toolbar">
+    <div><h1>Estadísticas de la clínica</h1><p class="subtitle">Del {{ start|date:"d/m/Y" }} al {{ end|date:"d/m/Y" }}</p></div>
+    <a class="button secondary" href="{% url 'reports-export-form' %}?desde={{ start|date:'Y-m-d' }}&amp;hasta={{ end|date:'Y-m-d' }}">Exportar reportes</a>
+</div>
+<form method="get" class="filter" style="margin-bottom:1rem">
+    <label>Desde <input type="date" name="desde" value="{{ start|date:'Y-m-d' }}"></label>
+    <label>Hasta <input type="date" name="hasta" value="{{ end|date:'Y-m-d' }}"></label>
+    <button class="secondary">Ver período</button>
+</form>
+
+<div class="kpis">
+    <div class="kpi"><span>Ingresos</span><strong>{{ m.income|clp }}</strong><small>{{ m.visits }} atenciones</small></div>
+    <div class="kpi"><span>Ticket promedio</span><strong>{{ m.ticket|clp }}</strong><small>por atención cobrada</small></div>
+    <div class="kpi"><span>Compras de insumos</span><strong>{{ m.expenses|clp }}</strong><small>resultado {{ m.balance|clp }}</small></div>
+    <div class="kpi{% if m.no_show >= 15 %} alert{% endif %}"><span>Inasistencia</span><strong>{{ m.no_show }}%</strong><small>{{ m.missed }} de {{ m.attended|add:m.missed }} citas pasadas</small></div>
+</div>
+
+<div class="report-grid">
+    <section class="panel">
+        <h2>Ingresos mensuales</h2>
+        <div class="columns-chart" role="img" aria-label="Ingresos de los últimos seis meses">
+            {% for month in m.monthly %}
+            <div class="col">
+                <span class="value">{{ month.total|clp }}</span>
+                <span class="bar" style="height: {{ month.pct }}%"></span>
+                <span class="label">{{ month.label }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="panel">
+        <h2>Servicios más demandados</h2>
+        {% if m.ranking %}
+        <ol class="bars">
+            {% for row in m.ranking %}
+            <li><span class="name">{{ row.name }}</span><span class="track"><span class="fill" style="width: {{ row.pct }}%"></span></span><span class="num">{{ row.n }} · {{ row.total|clp }}</span></li>
+            {% endfor %}
+        </ol>
+        {% else %}<p class="trail-empty">No hay atenciones en el período.</p>{% endif %}
+    </section>
+
+    <section class="panel">
+        <h2>Ocupación de agenda por profesional</h2>
+        {% if m.occupancy %}
+        <ol class="bars">
+            {% for row in m.occupancy %}
+            <li><span class="name">{{ row.name }}<small>{{ row.specialty }}</small></span><span class="track"><span class="fill" style="width: {{ row.pct }}%"></span></span><span class="num">{{ row.pct }}% · {{ row.hours }} de {{ row.available }} h</span></li>
+            {% endfor %}
+        </ol>
+        {% else %}<p class="trail-empty">No hay disponibilidad registrada en el período.</p>{% endif %}
+    </section>
+
+    <section class="panel">
+        <h2>Ocupación por especialidad</h2>
+        {% if m.specialties %}
+        <ol class="bars">
+            {% for row in m.specialties %}
+            <li><span class="name">{{ row.name }}</span><span class="track"><span class="fill cafe" style="width: {{ row.pct }}%"></span></span><span class="num">{{ row.pct }}%</span></li>
+            {% endfor %}
+        </ol>
+        {% else %}<p class="trail-empty">Sin datos en el período.</p>{% endif %}
+        <h3 style="margin-top:1.25rem">Asistencia a citas pasadas</h3>
+        <ul class="plain">
+            <li>Atendidas <span>{{ m.attended }}</span></li>
+            <li>No asistió <span>{{ m.missed }}</span></li>
+            <li>Canceladas <span>{{ m.cancelled }} (por el tutor desde el enlace: {{ m.tutor_cancelled }})</span></li>
+        </ul>
+    </section>
+</div>
+{% endblock %}

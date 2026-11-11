@@ -30,7 +30,7 @@ def is_full_staff(user):
 can_manage_professionals = can_purchase = can_use_admin = is_full_staff
 
 # Recursos del panel y la API que Recepción solo puede consultar.
-READ_ONLY_FOR_RECEPTION = {"profesionales"}
+READ_ONLY_FOR_RECEPTION = {"profesionales", "servicios"}
 
 
 def role_name(user):
