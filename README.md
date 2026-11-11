@@ -1,6 +1,8 @@
 # Veterinaria San Francisco
 
-**Aplicación desplegada en AWS EC2:** [http://44.213.33.107/](http://44.213.33.107/) · Django Admin: [http://44.213.33.107/admin/](http://44.213.33.107/admin/)
+**Aplicación desplegada en AWS EC2:** [https://petcare-sfvet.duckdns.org/](https://petcare-sfvet.duckdns.org/) · Django Admin: [https://petcare-sfvet.duckdns.org/admin/](https://petcare-sfvet.duckdns.org/admin/)
+
+**IP pública de EC2:** [http://44.213.33.107/](http://44.213.33.107/), que redirige al dominio con HTTPS.
 
 Panel interno para el Proyecto 1 de la Evaluación 3 de Desarrollo Backend, cuyo caso académico se llama PetCare. La interfaz lleva el nombre y el logo entregados por el estudiante. El diseño "Huellas" toma el verde y el café del logo, usa un menú lateral y muestra la agenda y la ficha clínica de cada mascota como un camino de huellas. Se adapta a pantallas de celular.
 
@@ -101,7 +103,7 @@ El panel de Django Admin está en `/admin/` y usa las mismas cuentas del panel c
 
 ## Despliegue en AWS EC2
 
-**IP pública (AWS EC2, IP elástica):** [http://44.213.33.107/](http://44.213.33.107/) · Django Admin: [http://44.213.33.107/admin/](http://44.213.33.107/admin/)
+**IP pública (AWS EC2, IP elástica):** `44.213.33.107` · Dominio con HTTPS: [https://petcare-sfvet.duckdns.org/](https://petcare-sfvet.duckdns.org/) · Django Admin: [https://petcare-sfvet.duckdns.org/admin/](https://petcare-sfvet.duckdns.org/admin/)
 
 Arquitectura en una única instancia EC2:
 
@@ -121,7 +123,7 @@ Navegador ──HTTP:80──▶ Nginx ──▶ Gunicorn (127.0.0.1:8000) ─�
    sudo petcare-manage createsuperuser
    ```
 
-4. Abre `http://44.213.33.107/` en el navegador.
+4. Abre `http://44.213.33.107/` en el navegador. Con HTTPS activado, redirige a `https://petcare-sfvet.duckdns.org/`.
 
 `setup.sh` se puede volver a ejecutar sin perder datos. Instala PostgreSQL, Nginx y Python, crea la base y su usuario con una clave aleatoria, y genera `/etc/petcare/petcare.env` con `PETCARE_DEBUG=0` y una `SECRET_KEY` propia. Después aplica las migraciones, ejecuta `collectstatic` y deja los servicios activos al arrancar. La IP y el DNS públicos se agregan solos a `ALLOWED_HOSTS` en cada inicio, porque en AWS Academy la IP cambia al reiniciar el laboratorio.
 
@@ -138,7 +140,7 @@ Operación habitual:
 
 ### HTTPS (opcional)
 
-Sin dominio, el sitio funciona por HTTP en la IP pública (`PETCARE_HTTPS=0`). Para activar HTTPS con un certificado gratuito de Let's Encrypt:
+Esta instancia ya tiene HTTPS activo en `petcare-sfvet.duckdns.org` con un certificado de Let's Encrypt. Sin dominio, el sitio funciona por HTTP en la IP pública (`PETCARE_HTTPS=0`). Para activar HTTPS con un certificado gratuito de Let's Encrypt:
 
 1. Asocia una IP elástica a la instancia para que la IP no cambie al reiniciar el laboratorio.
 2. Crea un subdominio gratuito en [DuckDNS](https://www.duckdns.org) que apunte a esa IP.
