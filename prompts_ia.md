@@ -53,6 +53,8 @@ Las decisiones de alcance, el nombre, el logo y la validación final de cada flu
 
 | «Sí, créalo» (datos de demostración para la defensa) | Comando que carga tutores, mascotas, profesionales, dos semanas de agenda, fichas clínicas, recordatorios e inventario usando las mismas reglas de negocio. No duplica datos si la base ya tiene registros | `clinic/management/commands/datos_demo.py` |
 
+| «me gustaría agregar un sistema en el que para el inventario puedan pedir una orden para comprar y que eso me lleve a transbank» y «solo quiero que sea simulado» | Órdenes de compra con ítems, pago con Webpay Plus en el ambiente de integración de Transbank y entrada automática al inventario si el pago se aprueba. Se probó el flujo completo con la tarjeta de prueba de Transbank | `clinic/webpay.py`, `clinic/purchases.py`, `clinic/purchase_views.py`, `clinic/templates/clinic/purchase_*.html` y `clinic/migrations/0002_ordenes_compra.py` |
+
 ## Criterio propio aplicado
 
 - Se descartó exponer PostgreSQL a Internet. La base solo escucha en `127.0.0.1` dentro de la instancia.

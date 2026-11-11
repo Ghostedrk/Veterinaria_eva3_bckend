@@ -1,0 +1,37 @@
+{% extends "clinic/base.html" %}
+{% block title %}{% if order %}Editar {{ order.numero }}{% else %}Nueva orden de compra{% endif %}{% endblock %}
+{% block content %}
+<a class="back" href="{% if order %}{% url 'purchase-detail' order.pk %}{% else %}{% url 'purchase-list' %}{% endif %}">Volver</a>
+<h1>{% if order %}Editar {{ order.numero }}{% else %}Nueva orden de compra{% endif %}</h1>
+<form method="post" class="panel order-form">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="order-head">
+        <p>{{ form.proveedor.label_tag }}{{ form.proveedor.errors }}{{ form.proveedor }}</p>
+        <p>{{ form.observacion.label_tag }}{{ form.observacion.errors }}{{ form.observacion }}</p>
+    </div>
+    <h2>Insumos</h2>
+    {{ formset.management_form }}
+    {{ formset.non_form_errors }}
+    <div class="table-wrap">
+    <table class="items">
+        <thead><tr><th scope="col">Insumo</th><th scope="col">Cantidad</th><th scope="col">Precio unitario (CLP)</th>{% if order %}<th scope="col">Quitar</th>{% endif %}</tr></thead>
+        <tbody>
+        {% for item in formset %}
+        <tr>
+            <td>{{ item.id }}{{ item.non_field_errors }}{{ item.insumo.errors }}{{ item.insumo }}</td>
+            <td>{{ item.cantidad.errors }}{{ item.cantidad }}</td>
+            <td>{{ item.precio_unitario.errors }}{{ item.precio_unitario }}</td>
+            {% if order %}<td>{% if item.instance.pk %}{{ item.DELETE }}{% endif %}</td>{% else %}<td hidden>{{ item.DELETE }}</td>{% endif %}
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    <p class="helptext">Deja en blanco las filas que no uses. Guarda y vuelve a editar si necesitas más filas.</p>
+    <div class="links">
+        <button>Guardar orden</button>
+        <a href="{% if order %}{% url 'purchase-detail' order.pk %}{% else %}{% url 'purchase-list' %}{% endif %}">Cancelar</a>
+    </div>
+</form>
+{% endblock %}

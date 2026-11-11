@@ -12,7 +12,8 @@
     {% endif %}
 </div>
 {% if slug == "insumos" %}
-<p><a class="button" href="{% url 'record-create' 'movimientos' %}?insumo={{ object.pk }}">Registrar movimiento</a></p>
+<p class="links"><a class="button" href="{% url 'record-create' 'movimientos' %}?insumo={{ object.pk }}">Registrar movimiento</a>
+<a class="button secondary" href="{% url 'purchase-create' %}">Pedir compra</a></p>
 {% endif %}
 <section class="panel">
     <dl class="details">

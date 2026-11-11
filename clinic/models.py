@@ -159,3 +159,68 @@ class Movimiento(models.Model):
             models.CheckConstraint(condition=models.Q(cantidad__gt=0),
                                    name="movimiento_cantidad_positiva"),
         ]
+
+
+class OrdenCompra(models.Model):
+    class Estado(models.TextChoices):
+        BORRADOR = "borrador", "Borrador"
+        PENDIENTE = "pendiente", "Esperando pago"
+        PAGADA = "pagada", "Pagada"
+        RECHAZADA = "rechazada", "Pago no realizado"
+        ANULADA = "anulada", "Anulada"
+
+    proveedor = models.CharField(max_length=150)
+    observacion = models.CharField("Observación", max_length=200, blank=True)
+    estado = models.CharField(max_length=10, choices=Estado, default=Estado.BORRADOR, db_index=True)
+    total = models.PositiveIntegerField("Total (CLP)", default=0, editable=False)
+    creada_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+",
+                                   editable=False)
+    creada_en = models.DateTimeField(auto_now_add=True)
+    pagada_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+",
+                                   null=True, blank=True, editable=False)
+    pagada_en = models.DateTimeField(null=True, blank=True, editable=False)
+    orden_webpay = models.CharField("Orden en Webpay", max_length=26, null=True, blank=True, unique=True,
+                                    editable=False)
+    token_webpay = models.CharField(max_length=64, null=True, blank=True, unique=True, editable=False)
+    codigo_autorizacion = models.CharField("Código de autorización", max_length=20, blank=True, editable=False)
+    tarjeta = models.CharField("Tarjeta (últimos 4)", max_length=4, blank=True, editable=False)
+    detalle_pago = models.CharField("Detalle del pago", max_length=200, blank=True, editable=False)
+
+    class Meta:
+        ordering = ["-creada_en", "-pk"]
+        verbose_name = "orden de compra"
+        verbose_name_plural = "órdenes de compra"
+
+    def __str__(self):
+        return f"{self.numero} · {self.proveedor}"
+
+    @property
+    def numero(self):
+        return f"OC-{self.pk:05d}" if self.pk else "OC nueva"
+
+    @property
+    def editable(self):
+        return self.estado in (self.Estado.BORRADOR, self.Estado.RECHAZADA)
+
+
+class ItemOrden(models.Model):
+    orden = models.ForeignKey(OrdenCompra, on_delete=models.CASCADE, related_name="items")
+    insumo = models.ForeignKey(Insumo, on_delete=models.PROTECT, related_name="+")
+    cantidad = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    precio_unitario = models.PositiveIntegerField("Precio unitario (CLP)", validators=[MinValueValidator(1)])
+
+    class Meta:
+        verbose_name = "ítem de la orden"
+        verbose_name_plural = "ítems de la orden"
+        constraints = [
+            models.UniqueConstraint(fields=["orden", "insumo"], name="item_orden_insumo_unico"),
+            models.CheckConstraint(condition=models.Q(cantidad__gt=0) & models.Q(precio_unitario__gt=0),
+                                   name="item_orden_valores_positivos"),
+        ]
+
+    def __str__(self):
+        return f"{self.insumo} × {self.cantidad}"
+
+    @property
+    def subtotal(self):
+        return self.cantidad * self.precio_unitario

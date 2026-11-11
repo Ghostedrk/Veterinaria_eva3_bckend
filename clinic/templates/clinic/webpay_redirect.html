@@ -1,0 +1,14 @@
+{% extends "clinic/base.html" %}
+{% load clinic_extras %}
+{% block title %}Redirigiendo a Webpay{% endblock %}
+{% block content %}
+<section class="panel form-panel">
+    <h1>Redirigiendo a Webpay</h1>
+    <p>Vas a pagar {{ order.numero }} por {{ order.total|clp }} en el ambiente de pruebas de Transbank.</p>
+    <form id="webpay-form" method="post" action="{{ webpay.url }}">
+        <input type="hidden" name="token_ws" value="{{ webpay.token }}">
+        <button class="webpay">Continuar a Webpay</button>
+    </form>
+</section>
+<script>document.getElementById("webpay-form").submit();</script>
+{% endblock %}

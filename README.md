@@ -68,6 +68,19 @@ $env:PSYCOPG_IMPL = 'python'
 3. Desde el perfil de la mascota, registra una atención. La ficha agrupa diagnósticos, tratamientos, recetas y exámenes.
 4. Programa un recordatorio de vacunación o control. El sistema calcula cuándo enviarlo a partir de la fecha objetivo y la anticipación. Si indicas una frecuencia en días, cada envío exitoso programa el siguiente.
 5. En **Inventario**, crea un insumo y registra entradas y salidas. El historial conserva usuario, fecha y motivo. El inicio muestra insumos con stock igual o inferior al mínimo.
+6. En **Compras**, crea una orden de compra con proveedor, insumos, cantidades y precios. Desde la alerta de stock del inicio, **Pedir compra de reposición** la prellena con los insumos bajo el mínimo. Con **Pagar con Webpay** se abre Webpay Plus de Transbank. Si el pago se aprueba, cada insumo entra al inventario como movimiento de entrada. Si se rechaza o se cancela, la orden queda marcada y se puede reintentar o anular.
+
+## Pagos con Webpay (simulados)
+
+El pago usa el **ambiente de integración** de Transbank: la página de Webpay es la real, pero con tarjetas de prueba y sin dinero real. Las credenciales públicas de integración vienen configuradas por defecto en `petcare/settings.py`, así que no hay que configurar nada. El servidor necesita salida a Internet hacia `webpay3gint.transbank.cl`.
+
+| Dato de prueba | Valor |
+| --- | --- |
+| Visa (aprobada) | 4051 8856 0044 6623, CVV 123, cualquier fecha futura |
+| Mastercard (rechazada) | 5186 0595 5959 0568, CVV 123 |
+| Autenticación del banco | RUT 11.111.111-1, clave 123 |
+
+El flujo está en `clinic/webpay.py` (cliente de la API REST v1.2), `clinic/purchases.py` (reglas del pago) y `clinic/purchase_views.py`. La confirmación se valida en el servidor con Transbank (`commit`): el monto y la orden deben coincidir y cada pago se procesa una sola vez. En Django Admin las órdenes son de solo lectura, para que el pago siempre pase por Webpay.
 
 ## Recordatorios
 

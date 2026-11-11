@@ -180,3 +180,25 @@ dd { margin: 0; }
     .login-side .trail { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+/* Compras */
+.tag.pendiente { background: #f8e6c4; color: #6b4708; }
+.tag.pagada { background: var(--brote); color: var(--bosque); }
+.tag.rechazada { background: var(--peligro-claro); color: var(--peligro); }
+.tag.anulada { background: #ececec; color: #555; }
+.tag.borrador { background: var(--cafe-claro); color: var(--cafe); }
+.order-form { max-width: 52rem; }
+.order-head { display: grid; gap: 0 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
+.items td { vertical-align: top; min-width: 7rem; }
+.items td:first-child { min-width: 14rem; }
+.items input[type=checkbox] { width: auto; }
+.table-wrap.flat { border: 0; border-radius: 0; }
+tfoot th, tfoot td { border-top: 2px solid var(--linea); font-family: "Baloo 2", sans-serif; font-weight: 700; color: var(--bosque); }
+.total { font-size: 1.15rem; }
+.webpay { background: #c8102e; border-color: #c8102e; font-size: 1.05rem; padding: .6rem 1.3rem; }
+.webpay:hover { background: #9f0c24; border-color: #9f0c24; }
+.test-cards { margin: 1rem 0; padding: .6rem .85rem; border-radius: 12px; background: var(--musgo); }
+.test-cards summary { cursor: pointer; font-weight: 700; color: var(--cafe); }
+.pay-box .details { grid-template-columns: minmax(0, 1fr); margin-top: 1rem; }
+.order-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); align-items: start; }
+.order-grid td:not(:first-child), .order-grid th { white-space: nowrap; }

@@ -9,6 +9,7 @@
 <nav class="toolbar links" aria-label="Inventario">
     <a href="{% url 'record-list' 'insumos' %}">Insumos</a>
     <a href="{% url 'record-list' 'movimientos' %}">Historial de movimientos</a>
+    <a href="{% url 'purchase-list' %}">Órdenes de compra</a>
 </nav>
 {% endif %}
 <form method="get" class="toolbar filter">

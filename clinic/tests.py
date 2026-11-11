@@ -11,7 +11,8 @@ from django.urls import reverse
 from django.db import models
 from django.utils import timezone
 
-from .models import Cita, Disponibilidad, Insumo, Mascota, Movimiento, Profesional, Recordatorio, Tutor
+from .models import (Cita, Disponibilidad, Insumo, Mascota, Movimiento, OrdenCompra, Profesional,
+                     Recordatorio, Tutor)
 from .services import save_record
 
 
@@ -175,3 +176,69 @@ class ClinicFlows(TestCase):
         self.assertEqual(Recordatorio.objects.filter(enviar_el__lte=timezone.localdate()).count(), 2)
         call_command("datos_demo", stdout=out)
         self.assertEqual(Tutor.objects.count(), 5)
+
+    def purchase_order(self):
+        item = Insumo.objects.create(codigo="VAC-R", nombre="Vacuna antirrábica", categoria="Biológicos", minimo=5)
+        response = self.client.post("/compras/nueva/", {
+            "proveedor": "Distribuidora Vet", "observacion": "",
+            "items-TOTAL_FORMS": "3", "items-INITIAL_FORMS": "0", "items-MIN_NUM_FORMS": "1",
+            "items-MAX_NUM_FORMS": "1000",
+            "items-0-insumo": item.pk, "items-0-cantidad": "10", "items-0-precio_unitario": "4500",
+        })
+        self.assertEqual(response.status_code, 302)
+        return OrdenCompra.objects.get(), item
+
+    def test_purchase_paid_with_webpay_adds_stock_once(self):
+        order, item = self.purchase_order()
+        self.assertEqual(order.total, 45000)
+        self.assertContains(self.client.get("/"), "Pedir compra de reposición")
+        with patch("clinic.webpay.create_transaction",
+                   return_value={"token": "abc123", "url": "https://webpay3gint.transbank.cl/webpayserver/initTransaction"}) as create:
+            response = self.client.post(f"/compras/{order.pk}/pagar/")
+        self.assertContains(response, 'name="token_ws" value="abc123"')
+        self.assertEqual(create.call_args.args[2], 45000)
+        self.assertTrue(create.call_args.args[3].endswith("/compras/webpay/retorno/"))
+
+        result = {"status": "AUTHORIZED", "response_code": 0, "amount": 45000,
+                  "buy_order": OrdenCompra.objects.get().orden_webpay, "authorization_code": "1213",
+                  "card_detail": {"card_number": "6623"}}
+        anonymous = Client(enforce_csrf_checks=True)  # Webpay vuelve con un POST externo, sin sesión.
+        with patch("clinic.webpay.commit_transaction", return_value=result) as commit:
+            self.assertRedirects(anonymous.post("/compras/webpay/retorno/", {"token_ws": "abc123"}),
+                                 f"/compras/{order.pk}/", fetch_redirect_response=False)
+            anonymous.post("/compras/webpay/retorno/", {"token_ws": "abc123"})
+        self.assertEqual(commit.call_count, 1)
+        order.refresh_from_db()
+        item.refresh_from_db()
+        self.assertEqual(order.estado, OrdenCompra.Estado.PAGADA)
+        self.assertEqual(order.tarjeta, "6623")
+        self.assertEqual(item.stock, 10)
+        self.assertEqual(Movimiento.objects.get().registrado_por, self.staff)
+        self.assertEqual(self.client.post(f"/compras/{order.pk}/pagar/").status_code, 302)
+        self.assertEqual(self.client.get(f"/admin/clinic/ordencompra/{order.pk}/change/").status_code, 200)
+
+    def test_purchase_rejected_or_cancelled_keeps_stock_and_allows_retry(self):
+        order, item = self.purchase_order()
+        with patch("clinic.webpay.create_transaction",
+                   return_value={"token": "tok1", "url": "https://webpay3gint.transbank.cl/x"}):
+            self.client.post(f"/compras/{order.pk}/pagar/")
+        failed = {"status": "FAILED", "response_code": -1, "amount": 45000,
+                  "buy_order": OrdenCompra.objects.get().orden_webpay}
+        with patch("clinic.webpay.commit_transaction", return_value=failed):
+            Client().post("/compras/webpay/retorno/", {"token_ws": "tok1"})
+        order.refresh_from_db()
+        self.assertEqual(order.estado, OrdenCompra.Estado.RECHAZADA)
+
+        with patch("clinic.webpay.create_transaction",
+                   return_value={"token": "tok2", "url": "https://webpay3gint.transbank.cl/x"}):
+            self.client.post(f"/compras/{order.pk}/pagar/")
+        Client().post("/compras/webpay/retorno/", {"TBK_TOKEN": "tok2", "TBK_ORDEN_COMPRA": "x"})
+        order.refresh_from_db()
+        item.refresh_from_db()
+        self.assertEqual(order.estado, OrdenCompra.Estado.RECHAZADA)
+        self.assertIn("canceló", order.detalle_pago)
+        self.assertEqual(item.stock, 0)
+        self.client.post(f"/compras/{order.pk}/anular/")
+        order.refresh_from_db()
+        self.assertEqual(order.estado, OrdenCompra.Estado.ANULADA)
+        self.assertEqual(Client().get("/compras/").status_code, 302)

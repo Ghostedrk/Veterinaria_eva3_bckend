@@ -92,6 +92,14 @@ EMAIL_USE_TLS = os.getenv("PETCARE_SMTP_TLS", "1") == "1"
 EMAIL_TIMEOUT = 15
 DEFAULT_FROM_EMAIL = os.getenv("PETCARE_FROM_EMAIL", "petcare@example.test")
 
+# Webpay Plus. Los valores por defecto son las credenciales públicas del ambiente
+# de integración de Transbank: pagos simulados con tarjetas de prueba.
+WEBPAY_BASE_URL = os.getenv("PETCARE_WEBPAY_URL", "https://webpay3gint.transbank.cl")
+WEBPAY_COMMERCE_CODE = os.getenv("PETCARE_WEBPAY_COMMERCE_CODE", "597055555532")
+WEBPAY_API_KEY = os.getenv(
+    "PETCARE_WEBPAY_API_KEY", "579B532A7440BB0C9079DED94D31EA1615BACEB56610332264630D42D0A36B1C",
+)
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAdminUser"],

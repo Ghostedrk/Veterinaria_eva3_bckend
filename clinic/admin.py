@@ -5,8 +5,8 @@ from django.db.models import Count, F
 from django.utils import timezone
 from django.utils.html import format_html
 
-from .models import (Atencion, Cita, Disponibilidad, Insumo, Mascota, Movimiento, Profesional,
-                     Recordatorio, Tutor)
+from .models import (Atencion, Cita, Disponibilidad, Insumo, ItemOrden, Mascota, Movimiento, OrdenCompra,
+                     Profesional, Recordatorio, Tutor)
 from .services import (affected_appointments, delete_record, reminder_send_date, save_record,
                        validate_rules)
 
@@ -319,3 +319,46 @@ class MovimientoAdmin(ClinicAdmin):
 
     def get_readonly_fields(self, request, obj=None):
         return ("registrado_por", "registrado_en") if obj is not None else ()
+
+
+class ItemOrdenInline(ReadOnlyInline):
+    model = ItemOrden
+    fields = ("insumo", "cantidad", "precio_unitario")
+    show_change_link = False
+
+
+@admin.register(OrdenCompra)
+class OrdenCompraAdmin(ClinicAdmin):
+    """Read-only: orders are created and paid from the panel so payment always goes through Webpay."""
+
+    list_display = ("numero", "proveedor", "total_clp", "estado_badge", "creada_en", "pagada_en", "tarjeta")
+    list_filter = ("estado", ("creada_en", admin.DateFieldListFilter))
+    search_fields = ("proveedor", "orden_webpay", "codigo_autorizacion")
+    list_select_related = ("creada_por", "pagada_por")
+    date_hierarchy = "creada_en"
+    inlines = [ItemOrdenInline]
+    fields = ("proveedor", "observacion", "estado", "total", "creada_por", "creada_en", "pagada_por",
+              "pagada_en", "orden_webpay", "codigo_autorizacion", "tarjeta", "detalle_pago")
+    readonly_fields = fields
+
+    @admin.display(description="Orden", ordering="pk")
+    def numero(self, obj):
+        return obj.numero
+
+    @admin.display(description="Total", ordering="total")
+    def total_clp(self, obj):
+        return f"${obj.total:,}".replace(",", ".")
+
+    @admin.display(description="Estado", ordering="estado")
+    def estado_badge(self, obj):
+        tone = {"borrador": "info", "pendiente": "warn", "pagada": "ok", "rechazada": "warn", "anulada": "muted"}
+        return badge(obj.get_estado_display(), tone[obj.estado])
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

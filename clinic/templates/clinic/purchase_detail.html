@@ -1,0 +1,65 @@
+{% extends "clinic/base.html" %}
+{% load clinic_extras %}
+{% block title %}{{ order.numero }}{% endblock %}
+{% block content %}
+<a class="back" href="{% url 'purchase-list' %}">Volver a órdenes de compra</a>
+<div class="toolbar">
+    <div>
+        <h1>{{ order.numero }} · {{ order.proveedor }}</h1>
+        <p><span class="tag {{ order.estado }}">{{ order.get_estado_display }}</span></p>
+    </div>
+    {% if order.editable %}
+    <div class="links">
+        <a class="button secondary" href="{% url 'purchase-edit' order.pk %}">Editar</a>
+        <form method="post" action="{% url 'purchase-cancel' order.pk %}">{% csrf_token %}<button class="secondary">Anular</button></form>
+    </div>
+    {% endif %}
+</div>
+
+<div class="order-grid">
+    <section class="panel">
+        <h2>Insumos</h2>
+        <div class="table-wrap flat">
+        <table>
+            <thead><tr><th scope="col">Insumo</th><th scope="col">Cantidad</th><th scope="col">Precio unitario</th><th scope="col">Subtotal</th></tr></thead>
+            <tbody>
+            {% for item in items %}
+            <tr><td>{{ item.insumo.nombre }}</td><td>{{ item.cantidad }} {{ item.insumo.unidad }}</td><td>{{ item.precio_unitario|clp }}</td><td>{{ item.subtotal|clp }}</td></tr>
+            {% endfor %}
+            </tbody>
+            <tfoot><tr><th scope="row" colspan="3">Total</th><td class="total">{{ order.total|clp }}</td></tr></tfoot>
+        </table>
+        </div>
+        {% if order.observacion %}<p class="subtitle" style="margin-top:1rem">{{ order.observacion }}</p>{% endif %}
+    </section>
+
+    <section class="panel pay-box">
+        <h2>Pago</h2>
+        {% if order.editable %}
+        <p>Al pagar se abre Webpay de Transbank en su <strong>ambiente de pruebas</strong>. No se cobra dinero real.</p>
+        <form method="post" action="{% url 'purchase-pay' order.pk %}">
+            {% csrf_token %}
+            <button class="webpay">Pagar {{ order.total|clp }} con Webpay</button>
+        </form>
+        <details class="test-cards">
+            <summary>Tarjetas de prueba</summary>
+            <ul class="plain">
+                <li>Visa (aprobada) <span>4051 8856 0044 6623 · CVV 123 · cualquier fecha futura</span></li>
+                <li>Mastercard (rechazada) <span>5186 0595 5959 0568 · CVV 123</span></li>
+                <li>Autenticación del banco <span>RUT 11.111.111-1 · clave 123</span></li>
+            </ul>
+        </details>
+        {% endif %}
+        <dl class="details">
+            <div><dt>Creada por</dt><dd>{{ order.creada_por }} · {{ order.creada_en|date:"d/m/Y H:i" }}</dd></div>
+            {% if order.detalle_pago %}<div><dt>Resultado</dt><dd>{{ order.detalle_pago }}</dd></div>{% endif %}
+            {% if order.pagada_en %}
+            <div><dt>Pagada</dt><dd>{{ order.pagada_en|date:"d/m/Y H:i" }} por {{ order.pagada_por }}</dd></div>
+            <div><dt>Autorización</dt><dd>{{ order.codigo_autorizacion }}{% if order.tarjeta %} · tarjeta terminada en {{ order.tarjeta }}{% endif %}</dd></div>
+            <div><dt>Orden en Webpay</dt><dd>{{ order.orden_webpay }}</dd></div>
+            {% endif %}
+        </dl>
+        {% if order.estado == "pagada" %}<p style="margin-top:1rem"><a href="{% url 'record-list' 'movimientos' %}">Ver las entradas en el inventario</a></p>{% endif %}
+    </section>
+</div>
+{% endblock %}
