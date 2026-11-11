@@ -51,6 +51,8 @@ Las decisiones de alcance, el nombre, el logo y la validación final de cada flu
 | --- | --- | --- |
 | «Todo está en local y aún no lo paso a aws, hoy debo realizar eso» | Script de instalación idempotente con PostgreSQL, Gunicorn, Nginx y systemd, timer de recordatorios y detección automática de la IP pública para `ALLOWED_HOSTS` | `deploy/` y la sección de despliegue del `README.md` |
 
+| «Sí, créalo» (datos de demostración para la defensa) | Comando que carga tutores, mascotas, profesionales, dos semanas de agenda, fichas clínicas, recordatorios e inventario usando las mismas reglas de negocio. No duplica datos si la base ya tiene registros | `clinic/management/commands/datos_demo.py` |
+
 ## Criterio propio aplicado
 
 - Se descartó exponer PostgreSQL a Internet. La base solo escucha en `127.0.0.1` dentro de la instancia.

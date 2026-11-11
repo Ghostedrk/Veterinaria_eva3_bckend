@@ -8,6 +8,7 @@ from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.db import models
 from django.utils import timezone
 
 from .models import Cita, Disponibilidad, Insumo, Mascota, Movimiento, Profesional, Recordatorio, Tutor
@@ -159,3 +160,18 @@ class ClinicFlows(TestCase):
 
         self.client.force_login(self.outsider)
         self.assertEqual(self.client.get("/admin/").status_code, 302)
+
+    def test_demo_data_loads_once_and_respects_rules(self):
+        Disponibilidad.objects.all().delete()
+        Mascota.objects.all().delete()
+        Tutor.objects.all().delete()
+        Profesional.objects.all().delete()
+        out = StringIO()
+        call_command("datos_demo", stdout=out)
+        self.assertIn("Datos de demostración cargados", out.getvalue())
+        self.assertEqual(Tutor.objects.count(), 5)
+        self.assertEqual(Cita.objects.count(), 30)
+        self.assertTrue(Insumo.objects.filter(stock__lte=models.F("minimo")).exists())
+        self.assertEqual(Recordatorio.objects.filter(enviar_el__lte=timezone.localdate()).count(), 2)
+        call_command("datos_demo", stdout=out)
+        self.assertEqual(Tutor.objects.count(), 5)

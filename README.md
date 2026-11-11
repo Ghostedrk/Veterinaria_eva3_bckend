@@ -130,6 +130,7 @@ Operación habitual:
 | Acción | Comando |
 | --- | --- |
 | Actualizar desde GitHub | `sudo bash /opt/petcare/deploy/update.sh` |
+| Cargar datos de demostración (solo si la base no tiene tutores) | `sudo petcare-manage datos_demo` |
 | Ver registros de la app | `sudo journalctl -u petcare -n 50` |
 | Ver recordatorios enviados | `sudo journalctl -u petcare-reminders -n 50` |
 | Enviar recordatorios ahora | `sudo petcare-manage enviar_recordatorios` |
