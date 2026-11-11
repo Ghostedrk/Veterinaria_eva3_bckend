@@ -133,5 +133,22 @@ Operación habitual:
 | Enviar recordatorios ahora | `sudo petcare-manage enviar_recordatorios` |
 | Consola de PostgreSQL | `sudo -u postgres psql petcare` |
 
-Sin dominio ni certificado, el sitio funciona por HTTP con `PETCARE_HTTPS=0`. Si se configura HTTPS, se cambia a `1` en `/etc/petcare/petcare.env` y se ejecuta `sudo systemctl restart petcare`. En el servidor los recordatorios se escriben en el registro del sistema. Para enviarlos por correo real hay que configurar las variables `PETCARE_SMTP_*` y quitar `PETCARE_EMAIL_BACKEND`.
+### HTTPS (opcional)
+
+Sin dominio, el sitio funciona por HTTP en la IP pública (`PETCARE_HTTPS=0`). Para activar HTTPS con un certificado gratuito de Let's Encrypt:
+
+1. Asocia una IP elástica a la instancia para que la IP no cambie al reiniciar el laboratorio.
+2. Crea un subdominio gratuito en [DuckDNS](https://www.duckdns.org) que apunte a esa IP.
+3. Abre el puerto **443** en el grupo de seguridad.
+4. Ejecuta el script con tu subdominio y tu correo:
+
+   ```bash
+   sudo bash /opt/petcare/deploy/enable-https.sh petcare-sf.duckdns.org correo@ejemplo.com
+   ```
+
+El script verifica que el dominio apunte a la instancia, obtiene el certificado y activa las cookies seguras y la redirección a HTTPS en Django. Si después alguien entra por `http://IP`, se le redirige al dominio con HTTPS. El certificado se renueva solo y `update.sh` conserva esta configuración.
+
+### Correo de recordatorios
+
+En el servidor los recordatorios se escriben en el registro del sistema. Para enviarlos por correo real hay que configurar las variables `PETCARE_SMTP_*` y quitar `PETCARE_EMAIL_BACKEND`.
 

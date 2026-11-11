@@ -91,7 +91,14 @@ systemctl restart petcare
 systemctl start petcare-reminders.timer
 
 echo "==> Nginx"
-install -m 644 "$APP_DIR/deploy/nginx-petcare.conf" /etc/nginx/sites-available/petcare
+mkdir -p /var/www/certbot
+if [ -f "$ENV_DIR/https-domain" ]; then
+    # HTTPS ya fue activado con enable-https.sh: se conserva al actualizar.
+    DOMAIN=$(cat "$ENV_DIR/https-domain")
+    sed "s/__DOMAIN__/$DOMAIN/g" "$APP_DIR/deploy/nginx-petcare-https.conf" > /etc/nginx/sites-available/petcare
+else
+    install -m 644 "$APP_DIR/deploy/nginx-petcare.conf" /etc/nginx/sites-available/petcare
+fi
 ln -sf /etc/nginx/sites-available/petcare /etc/nginx/sites-enabled/petcare
 rm -f /etc/nginx/sites-enabled/default
 nginx -t
