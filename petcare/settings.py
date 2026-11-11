@@ -50,6 +50,9 @@ else:
         "PASSWORD": os.getenv("PGPASSWORD", ""),
         "HOST": os.getenv("PGHOST", "127.0.0.1"),
         "PORT": os.getenv("PGPORT", "5432"),
+        # Reutiliza la conexión entre peticiones en vez de autenticarse cada vez.
+        "CONN_MAX_AGE": int(os.getenv("PETCARE_DB_CONN_AGE", "60")),
+        "CONN_HEALTH_CHECKS": True,
     }}
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -62,6 +65,13 @@ TIME_ZONE = "America/Santiago"
 USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+if not DEBUG:
+    # Nombres con hash (panel.3f2a1c.css): el navegador los guarda por un año y
+    # descarga la versión nueva solo cuando el archivo cambia.
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"},
+    }
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "dashboard"

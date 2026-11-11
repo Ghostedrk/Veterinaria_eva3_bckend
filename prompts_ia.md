@@ -55,6 +55,8 @@ Las decisiones de alcance, el nombre, el logo y la validación final de cada flu
 
 | «me gustaría agregar un sistema en el que para el inventario puedan pedir una orden para comprar y que eso me lleve a transbank» y «solo quiero que sea simulado» | Órdenes de compra con ítems, pago con Webpay Plus en el ambiente de integración de Transbank y entrada automática al inventario si el pago se aprueba. Se probó el flujo completo con la tarjeta de prueba de Transbank | `clinic/webpay.py`, `clinic/purchases.py`, `clinic/purchase_views.py`, `clinic/templates/clinic/purchase_*.html` y `clinic/migrations/0002_ordenes_compra.py` |
 
+| «Hay alguna forma de optimizar la pagina? siento que va bastante lenta» | Se midieron los tiempos en el sitio público: Django respondía rápido y el problema eran los bytes sobre una conexión lenta hacia us-east-1. Logo de 150 KB a 15 KB (WebP), compresión gzip en Nginx, estáticos versionados con caché de un año, fuentes sin bloquear el dibujado y conexiones persistentes a PostgreSQL | `clinic/static/clinic/logo.webp`, `deploy/nginx-*.conf`, `petcare/settings.py` y `clinic/templates/` |
+
 ## Criterio propio aplicado
 
 - Se descartó exponer PostgreSQL a Internet. La base solo escucha en `127.0.0.1` dentro de la instancia.

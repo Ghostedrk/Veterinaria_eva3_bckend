@@ -2,12 +2,14 @@
 {% load static %}
 {% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title }}{% endblock %}
 {% block extrastyle %}{{ block.super }}
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Nunito:wght@400;600;700&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Nunito:wght@400;600;700&display=swap" media="print" onload="this.media='all'">
+<link rel="icon" type="image/png" href="{% static 'clinic/favicon.png' %}">
 <link rel="stylesheet" href="{% static 'clinic/admin.css' %}">{% endblock %}
 {% block branding %}
 <div id="site-name">
     <a href="{% url 'admin:index' %}" class="pc-brand">
-        <img src="{% static 'clinic/logo.png' %}" alt="" width="96" height="48">
+        <img src="{% static 'clinic/logo.webp' %}" alt="" width="96" height="48">
         <span>{{ site_header }}<small>Django Admin · PetCare</small></span>
     </a>
 </div>

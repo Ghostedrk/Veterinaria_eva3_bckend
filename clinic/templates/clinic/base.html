@@ -4,11 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Panel interno{% endblock %} | Veterinaria San Francisco</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Nunito:wght@400;600;700&display=swap">
     <link rel="stylesheet" href="{% static 'clinic/panel.css' %}">
-    <link rel="icon" href="{% static 'clinic/logo.png' %}">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    {# Las fuentes cargan sin bloquear el dibujado: mientras llegan se usa la del sistema. #}
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Nunito:wght@400;600;700&display=swap" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Nunito:wght@400;600;700&display=swap"></noscript>
+    <link rel="icon" type="image/png" href="{% static 'clinic/favicon.png' %}">
 </head>
 <body class="{% if user.is_authenticated and user.is_staff %}with-sidebar{% else %}bare{% endif %}">
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -24,7 +25,7 @@
 {% if user.is_authenticated and user.is_staff %}
 <aside class="sidebar">
     <a class="brand" href="{% url 'dashboard' %}">
-        <span class="logo-plate"><img src="{% static 'clinic/logo.png' %}" alt="Veterinaria San Francisco"></span>
+        <span class="logo-plate"><img src="{% static 'clinic/logo.webp' %}" alt="Veterinaria San Francisco" width="480" height="240"></span>
     </a>
     <nav class="side-nav" aria-label="Gestión">
         {% with p=request.path %}
