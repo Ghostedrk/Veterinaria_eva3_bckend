@@ -104,6 +104,8 @@ systemctl restart petcare
 systemctl start petcare-reminders.timer
 
 echo "==> Nginx"
+# Ubuntu no crea /var/cache/nginx: la caché de estáticos necesita su carpeta antes de nginx -t.
+install -d -o www-data -g www-data -m 700 /var/cache/nginx /var/cache/nginx/petcare-static
 mkdir -p /var/www/certbot
 if [ -f "$ENV_DIR/https-domain" ]; then
     # HTTPS ya fue activado con enable-https.sh: se conserva al actualizar.
