@@ -2,6 +2,7 @@
 from collections import defaultdict
 from datetime import date, datetime, time, timedelta
 from io import BytesIO
+from uuid import uuid4
 
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
@@ -14,7 +15,24 @@ from django.views.decorators.http import require_safe
 
 from . import roles
 from .models import Atencion, Cita, Disponibilidad, OrdenCompra, Profesional
+from .storage import using_s3
 from .views import staff_required
+
+
+def deliver(response, filename):
+    """Con S3 activo, guarda el reporte en el bucket privado y redirige a una URL prefirmada."""
+    if not using_s3():
+        return response
+    from django.core.files.base import ContentFile
+    from django.core.files.storage import default_storage
+
+    ext = filename.rsplit(".", 1)[-1]
+    name = default_storage.save(f"reportes/{timezone.localdate():%Y/%m}/{uuid4().hex}.{ext}",
+                                ContentFile(response.content))
+    return redirect(default_storage.url(name, parameters={
+        "ResponseContentDisposition": f'attachment; filename="{filename}"',
+        "ResponseContentType": response["Content-Type"],
+    }, expire=300))
 
 MONTHS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
 
@@ -187,7 +205,7 @@ def xlsx_response(filename, sheets, start, end):
     response = HttpResponse(buffer.getvalue(),
                             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     response["Content-Disposition"] = f'attachment; filename="{filename}.xlsx"'
-    return response
+    return deliver(response, f"{filename}.xlsx")
 
 
 def pdf_response(filename, title, sections, start, end, summary=()):
@@ -236,7 +254,7 @@ def pdf_response(filename, title, sections, start, end, summary=()):
     doc.build(story)
     response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
     response["Content-Disposition"] = f'attachment; filename="{filename}.pdf"'
-    return response
+    return deliver(response, f"{filename}.pdf")
 
 
 @staff_required

@@ -1,6 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth import views as auth
 from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+
+from clinic import auth_api
+from clinic.storage import serve_static
 
 from clinic import clinical_views as clinica
 from clinic import purchase_views as compras
@@ -43,7 +47,16 @@ urlpatterns = [
     path("estadisticas/", reports.dashboard, name="reports"),
     path("reportes/", reports.export_form, name="reports-export-form"),
     path("reportes/descargar/", reports.export, name="reports-export"),
+    path("api/token/", auth_api.LoginView.as_view(), name="token"),
+    path("api/token/refresh/", auth_api.RefreshView.as_view(), name="token-refresh"),
+    path("api/token/logout/", auth_api.LogoutView.as_view(), name="token-logout"),
+    path("api/yo/", auth_api.me, name="api-me"),
+    path("api/salud/", auth_api.health, name="api-health"),
     path("api/", include(router.urls)),
+    # La documentación vive fuera de /api/ para consultarla con la sesión del panel.
+    path("docs/api/schema/", SpectacularAPIView.as_view(), name="api-schema"),
+    path("docs/api/", SpectacularSwaggerView.as_view(url_name="api-schema"), name="api-docs"),
+    path("static/<path:path>", serve_static, name="static-file"),
     path("admin/", admin.site.urls),
 ]
 

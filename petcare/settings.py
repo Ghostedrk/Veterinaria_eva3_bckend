@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -12,11 +13,14 @@ ALLOWED_HOSTS = os.getenv("PETCARE_HOSTS", "localhost,127.0.0.1").split(",")
 INSTALLED_APPS = [
     "django.contrib.auth", "django.contrib.contenttypes", "django.contrib.sessions",
     "django.contrib.messages", "django.contrib.staticfiles", "rest_framework",
+    "rest_framework_simplejwt.token_blacklist", "drf_spectacular", "corsheaders", "storages",
     # clinic goes before admin so its admin/base_site.html template takes precedence.
     "clinic", "django.contrib.admin",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "clinic.middleware.ApiGatewayOnlyMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -54,7 +58,21 @@ else:
         # Reutiliza la conexión entre peticiones en vez de autenticarse cada vez.
         "CONN_MAX_AGE": int(os.getenv("PETCARE_DB_CONN_AGE", "60")),
         "CONN_HEALTH_CHECKS": True,
+        # TLS hacia RDS: con verify-full se valida el certificado del servidor con la CA de AWS.
+        "OPTIONS": {key: value for key, value in {
+            "sslmode": os.getenv("PGSSLMODE", "prefer"),
+            "sslrootcert": os.getenv("PGSSLROOTCERT", ""),
+        }.items() if value},
     }}
+
+# Argon2id primero (ganador de la Password Hashing Competition). Los hashes PBKDF2 existentes
+# siguen siendo válidos y Django los actualiza a Argon2 la próxima vez que el usuario inicia sesión.
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.ScryptPasswordHasher",
+]
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": f"django.contrib.auth.password_validation.{validator}"}
@@ -69,11 +87,29 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # Adjuntos clínicos: fuera de /static/ y servidos solo por Django a usuarios con sesión.
 MEDIA_ROOT = Path(os.getenv("PETCARE_MEDIA_ROOT", BASE_DIR / "media"))
 MEDIA_URL = "/adjuntos/"
+
+# Amazon S3: estáticos y archivos de la aplicación en un bucket privado (Block Public Access
+# activo, cifrado SSE-S3). Las credenciales las entrega el rol IAM de la EC2, no el código.
+S3_BUCKET = os.getenv("PETCARE_S3_BUCKET", "")
+if S3_BUCKET:
+    AWS_STORAGE_BUCKET_NAME = S3_BUCKET
+    AWS_S3_REGION_NAME = os.getenv("PETCARE_S3_REGION", "us-east-1")
+    AWS_S3_SIGNATURE_VERSION = "s3v4"
+    AWS_S3_ADDRESSING_STYLE = "virtual"
+    AWS_DEFAULT_ACL = None
+    AWS_S3_OBJECT_PARAMETERS = {"ServerSideEncryption": "AES256"}
+    AWS_QUERYSTRING_AUTH = True
+    AWS_QUERYSTRING_EXPIRE = int(os.getenv("PETCARE_S3_URL_SECONDS", "300"))
+    AWS_S3_FILE_OVERWRITE = False
+    STORAGES = {
+        "default": {"BACKEND": "storages.backends.s3.S3Storage", "OPTIONS": {"location": "media"}},
+        "staticfiles": {"BACKEND": "clinic.storage.PrivateS3StaticStorage"},
+    }
 ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # Firma de consentimientos (PNG en base64).
 # URL pública para los enlaces que reciben los tutores por correo.
 SITE_URL = os.getenv("PETCARE_SITE_URL", "").rstrip("/")
-if not DEBUG:
+if not DEBUG and not S3_BUCKET:
     # Nombres con hash (panel.3f2a1c.css): el navegador los guarda por un año y
     # descarga la versión nueva solo cuando el archivo cambia.
     STORAGES = {
@@ -121,8 +157,44 @@ WEBPAY_API_KEY = os.getenv(
 )
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.SessionAuthentication"],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAdminUser"],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS": "clinic.api.Pagination",
     "PAGE_SIZE": 25,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # Defensa en profundidad: además del throttling de API Gateway, el login limita intentos.
+    "DEFAULT_THROTTLE_RATES": {"login": os.getenv("PETCARE_LOGIN_RATE", "10/min")},
 }
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("PETCARE_JWT_ACCESS_MINUTES", "15"))),
+    "REFRESH_TOKEN_LIFETIME": timedelta(hours=int(os.getenv("PETCARE_JWT_REFRESH_HOURS", "12"))),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": os.getenv("PETCARE_JWT_KEY", SECRET_KEY),
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "PetCare API · Veterinaria San Francisco",
+    "DESCRIPTION": "API RESTful de tutores, mascotas, agenda, fichas clínicas, recordatorios e inventario. "
+                   "Autenticación con JWT (Bearer). En producción se consume a través de Amazon API Gateway.",
+    "VERSION": "2.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAdminUser"],
+    "COMPONENT_SPLIT_REQUEST": True,
+}
+
+# CORS: solo el frontend autorizado puede llamar a la API desde el navegador.
+CORS_ALLOWED_ORIGINS = [o for o in os.getenv("PETCARE_CORS_ORIGINS", "").split(",") if o]
+CORS_URLS_REGEX = r"^/api/.*$"
+
+# Si se define, /api/ solo acepta solicitudes que traen la cabecera secreta que agrega
+# API Gateway. Así nadie puede saltarse el rate limit llamando directo a la EC2.
+API_GATEWAY_SECRET = os.getenv("PETCARE_GATEWAY_SECRET", "")
+API_GATEWAY_HEADER = "HTTP_X_PETCARE_GATEWAY"

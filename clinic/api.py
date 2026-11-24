@@ -4,12 +4,20 @@ from django.db.models.deletion import ProtectedError
 from django.http import Http404
 from rest_framework import filters, permissions, serializers, viewsets
 from rest_framework.exceptions import APIException, PermissionDenied
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.routers import DefaultRouter
 
 from .resources import RESOURCES, is_readonly
 from .roles import RolePermission
 from .services import delete_record, save_record, set_professional_active
 from .views import CONFLICT_MESSAGE, PROTECTED_MESSAGE
+
+
+class Pagination(PageNumberPagination):
+    """Permite ?page_size= (hasta 200) para llenar listas desplegables del frontend."""
+
+    page_size_query_param = "page_size"
+    max_page_size = 200
 
 
 class Conflict(APIException):

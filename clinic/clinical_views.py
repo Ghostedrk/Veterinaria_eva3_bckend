@@ -14,6 +14,7 @@ from django.views.decorators.http import require_http_methods, require_POST, req
 from . import roles, tutor
 from .models import Adjunto, Atencion, Cita, Consentimiento, Mascota
 from .resources import ActiveProfessionalForm
+from .storage import presigned_url, using_s3
 from .views import staff_required
 
 MAGIC = {
@@ -140,6 +141,10 @@ def attachment_upload(request, pk):
 @require_safe
 def attachment_file(request, pk):
     attachment = get_object_or_404(Adjunto, pk=pk)
+    if using_s3():
+        # El bucket es privado: el navegador recibe un enlace firmado que vence en 2 minutos.
+        return redirect(presigned_url(attachment.archivo, filename=attachment.nombre_original,
+                                      download=request.GET.get("descargar") == "1"))
     try:
         handle = attachment.archivo.open("rb")
     except FileNotFoundError as exc:

@@ -44,7 +44,7 @@ class ClinicFlows(TestCase):
         anonymous = Client()
         self.assertRedirects(anonymous.get("/"), "/ingresar/?next=/")
         self.assertContains(anonymous.get("/ingresar/"), "Veterinaria San Francisco")
-        self.assertEqual(anonymous.get("/api/tutores/").status_code, 403)
+        self.assertEqual(anonymous.get("/api/tutores/").status_code, 401)  # JWT: sin credenciales
         self.assertEqual(self.client.get("/cuentas/").status_code, 403)
         self.client.force_login(self.outsider)
         self.assertEqual(self.client.get("/").status_code, 403)
