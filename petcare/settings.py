@@ -162,7 +162,7 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAdminUser"],
-    "DEFAULT_PAGINATION_CLASS": "clinic.api.Pagination",
+    "DEFAULT_PAGINATION_CLASS": "clinic.pagination.Pagination",
     "PAGE_SIZE": 25,
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     # Defensa en profundidad: además del throttling de API Gateway, el login limita intentos.
