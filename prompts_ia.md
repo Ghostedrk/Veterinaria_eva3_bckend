@@ -61,6 +61,14 @@ Las decisiones de alcance, el nombre, el logo y la validación final de cada flu
 
 | «Eso podrías agregarlo?» (adjuntos, control de peso, consentimientos, confirmación de citas por enlace, dashboard de Jefatura y exportación PDF/Excel) | Catálogo de servicios con precio y monto por atención, estado "No asistió", adjuntos validados y privados, curva de peso en SVG, enlaces firmados sin login para citas y consentimientos con firma en pantalla, aviso automático 24 horas antes, dashboard de métricas y reportes con reportlab y openpyxl | `clinic/clinical_views.py`, `clinic/tutor.py`, `clinic/reports.py`, `clinic/migrations/0004_ficha_extendida_y_reportes.py` y `clinic/test_extended.py` |
 
+## Etapa 6: Evaluación 4, arquitectura AWS y seguridad (Claude Code)
+
+| Solicitud del estudiante | Apoyo aplicado | Resultado en el repositorio |
+| --- | --- | --- |
+| «Bien, el siguiente paso es este, lo necesito para mañana» (pauta EVA 4) | Plan de arquitectura (EC2 frontend y backend, RDS, S3, API Gateway, CloudWatch, Lambda), JWT con rotación y lista negra, OpenAPI, CORS, Argon2, TLS a RDS, S3 privado con URL prefirmadas, cabecera secreta para obligar el paso por API Gateway, frontend separado, scripts de despliegue, prueba de rate limit, ZAP Baseline e informe técnico | `frontend/`, `clinic/auth_api.py`, `clinic/middleware.py`, `clinic/storage.py`, `deploy/*.sh`, `deploy/lambda/`, `docs/INFORME_EVA4.md` |
+
+Las recomendaciones de seguridad de la IA contrastadas con documentación oficial, y si se aplicaron o descartaron, están en la sección 11 del informe técnico.
+
 ## Criterio propio aplicado
 
 - Se descartó exponer PostgreSQL a Internet. La base solo escucha en `127.0.0.1` dentro de la instancia.

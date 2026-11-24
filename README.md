@@ -16,6 +16,23 @@ Stack: Django 5.2, Django REST Framework, PostgreSQL, plantillas HTML/CSS, Djang
 | Recordatorios de vacunación y controles | Modelo `Recordatorio` y comando `enviar_recordatorios` (timer de systemd en EC2) |
 | Seguridad y sesiones | Login de Django, roles Jefatura y Administración, CSRF, y API restringida a cuentas del personal |
 
+## Evaluación 4: arquitectura AWS, integración y seguridad
+
+El informe técnico con el índice de evidencias está en [`docs/INFORME_EVA4.md`](docs/INFORME_EVA4.md).
+
+| Componente | Dónde |
+| --- | --- |
+| Frontend separado (JS + JWT) | `frontend/`, instalado con `deploy/frontend-setup.sh` en la EC2 frontend |
+| API REST con JWT y OpenAPI | `/api/token/`, `/api/token/refresh/`, `/api/token/logout/`, `/api/yo/`, `/api/salud/`, `/api/{recurso}/` · documentación en `/docs/api/` |
+| API Gateway (HTTP API) | Ruta `ANY /api/{proxy+}` con throttling de 2 req/s y ráfaga de 5. La EC2 solo acepta `/api/` con la cabecera que agrega el gateway (`deploy/enable-gateway.sh`) |
+| RDS PostgreSQL | Cifrada, privada, con TLS `verify-full` y usuario de aplicación con privilegios mínimos (`deploy/migrate-to-rds.sh`) |
+| S3 | Bucket privado con SSE-S3 y versionado; estáticos, adjuntos y reportes con URL prefirmadas (`deploy/enable-s3.sh`) |
+| Contraseñas | Argon2id (`PASSWORD_HASHERS`) |
+| Rate limit | `deploy/rate-limit-test.ps1` o `deploy/rate-limit-test.sh` |
+| DAST | `deploy/zap-scan.sh` (OWASP ZAP Baseline) |
+| SAST | SonarQube Cloud (`sonar-project.properties`) |
+| Respaldo cada 7 h | `deploy/lambda/rds_snapshot.py` + regla EventBridge `rate(7 hours)` |
+
 ## Requisitos
 
 - Python 3.10 o superior y PostgreSQL 14 o superior.
