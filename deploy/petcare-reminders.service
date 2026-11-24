@@ -1,6 +1,6 @@
 [Unit]
 Description=PetCare - envío de recordatorios de vacunación y controles
-After=postgresql.service
+After=network-online.target
 
 [Service]
 Type=oneshot

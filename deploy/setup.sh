@@ -20,7 +20,7 @@ fi
 echo "==> Paquetes del sistema"
 apt-get update -q
 DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
-    python3-venv python3-pip postgresql nginx git curl
+    python3-venv python3-pip postgresql-client nginx git curl
 
 echo "==> Usuario del servicio"
 id petcare >/dev/null 2>&1 || useradd --system --home-dir "$APP_DIR" --shell /usr/sbin/nologin petcare
@@ -59,6 +59,8 @@ set -a
 set +a
 
 echo "==> PostgreSQL"
+if [ "$PGHOST" = "127.0.0.1" ] || [ "$PGHOST" = "localhost" ]; then
+DEBIAN_FRONTEND=noninteractive apt-get install -y -q postgresql
 systemctl enable --now postgresql
 if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$PGUSER'" | grep -q 1; then
     sudo -u postgres psql -q -c "ALTER ROLE $PGUSER WITH LOGIN PASSWORD '$PGPASSWORD'"
@@ -67,6 +69,15 @@ else
 fi
 if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='$PGDATABASE'" | grep -q 1; then
     sudo -u postgres createdb -O "$PGUSER" "$PGDATABASE"
+fi
+
+else
+    # Base de datos en Amazon RDS: no se instala PostgreSQL local. Se descarga la CA de AWS
+    # para validar el certificado TLS del servidor (sslmode=verify-full).
+    install -d -m 755 /etc/petcare
+    curl -sf -o /etc/petcare/rds-ca.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+    chmod 644 /etc/petcare/rds-ca.pem
+    echo "    Usando RDS en $PGHOST (TLS: ${PGSSLMODE:-prefer})"
 fi
 
 echo "==> Entorno virtual y dependencias"

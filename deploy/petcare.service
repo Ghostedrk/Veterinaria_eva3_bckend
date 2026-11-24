@@ -1,7 +1,7 @@
 [Unit]
 Description=PetCare - Django con Gunicorn
 After=network-online.target postgresql.service
-Wants=network-online.target postgresql.service
+Wants=network-online.target
 
 [Service]
 User=petcare
