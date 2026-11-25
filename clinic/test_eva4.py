@@ -106,6 +106,12 @@ class Eva4Api(TestCase):
                                     HTTP_ACCESS_CONTROL_REQUEST_METHOD="POST")
         self.assertNotIn("access-control-allow-origin", other)
 
+    def test_api_security_headers_from_zap_findings(self):
+        response = self.client.get("/api/salud/")
+        self.assertEqual(response["Cache-Control"], "no-store")
+        self.assertEqual(response["Cross-Origin-Resource-Policy"], "same-origin")
+        self.assertEqual(response["X-Content-Type-Options"], "nosniff")
+
     def test_openapi_docs_require_staff_session(self):
         self.assertEqual(self.client.get("/docs/api/schema/").status_code, 401)
         self.client.force_login(self.user)

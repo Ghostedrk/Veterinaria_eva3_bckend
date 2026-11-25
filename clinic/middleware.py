@@ -4,6 +4,26 @@ from django.conf import settings
 from django.http import JsonResponse
 
 
+class SecurityHeadersMiddleware:
+    """Cabeceras que OWASP ZAP marcó como ausentes (alertas 10015, 10049 y 90004).
+
+    - Las respuestas de la API contienen datos clínicos: no deben guardarse en cachés.
+    - Cross-Origin-Resource-Policy impide que otros sitios incrusten estos recursos
+      (no afecta a las llamadas con CORS que hace el frontend autorizado).
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if request.path.startswith("/api/"):
+            response["Cache-Control"] = "no-store"
+            response["Pragma"] = "no-cache"
+        response.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+        return response
+
+
 class ApiGatewayOnlyMiddleware:
     """La API (/api/) solo responde a solicitudes que pasaron por Amazon API Gateway.
 

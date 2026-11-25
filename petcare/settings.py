@@ -19,6 +19,7 @@ INSTALLED_APPS = [
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "clinic.middleware.SecurityHeadersMiddleware",
     "clinic.middleware.ApiGatewayOnlyMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -125,6 +126,8 @@ LOGOUT_REDIRECT_URL = "login"
 # public IP has no certificate, so PETCARE_HTTPS=0 keeps sessions working over HTTP.
 HTTPS = not DEBUG and os.getenv("PETCARE_HTTPS", "1") == "1"
 SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = SECURE_SSL_REDIRECT = HTTPS
+# OWASP ZAP 10035: HSTS obliga al navegador a usar siempre HTTPS con este dominio (1 año).
+SECURE_HSTS_SECONDS = int(os.getenv("PETCARE_HSTS_SECONDS", "31536000")) if HTTPS else 0
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_AGE = int(os.getenv("PETCARE_SESSION_SECONDS", str(8 * 3600)))
 X_FRAME_OPTIONS = "DENY"
