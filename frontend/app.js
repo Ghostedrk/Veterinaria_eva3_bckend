@@ -311,8 +311,9 @@ async function renderList(view, name, page = 1, query = "") {
         </table></div>
         <p class="muted pager">${data.count} registros${data.previous ? ' · <button class="linkish" data-page="-1">Anterior</button>' : ""}${data.next ? ' · <button class="linkish" data-page="1">Siguiente</button>' : ""}</p>`;
     const reload = (p, q) => renderList(view, name, p, q).catch((err) => flash(err.message, "error"));
-    $("#search").addEventListener("submit", (e) => { e.preventDefault(); reload(1, e.target.q.value.trim()); });
-    view.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => reload(page + Number(b.dataset.page), query)));
+    // reload() ya captura sus errores con .catch(); "void" deja explícito que no se espera el resultado.
+    $("#search").addEventListener("submit", (e) => { e.preventDefault(); void reload(1, e.target.q.value.trim()); });
+    view.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => { void reload(page + Number(b.dataset.page), query); }));
     view.querySelectorAll("[data-delete]").forEach((b) => b.addEventListener("click", async () => {
         if (!confirm(`¿Eliminar este registro de ${res.title.toLowerCase()}?`)) return;
         try {
