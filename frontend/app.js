@@ -126,7 +126,12 @@ function describeError(status, data) {
     return `La API respondió ${status}.`;
 }
 
+const SAFE_PATH = /^\/api\/[A-Za-z0-9_\-\/]*(\?[A-Za-z0-9_=&%.\-]*)?$/;
+const JWT_FORMAT = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+
 async function request(method, path, body, { retry = true, auth = true } = {}) {
+    // Solo rutas relativas de la API: impide que un dato manipulado dirija la solicitud a otro lugar.
+    if (!SAFE_PATH.test(path)) throw new ApiError(400, { detail: "Ruta de API no válida." });
     const headers = { "Accept": "application/json" };
     if (body !== undefined) headers["Content-Type"] = "application/json";
     if (auth && state.access) headers["Authorization"] = `Bearer ${state.access}`;
@@ -148,7 +153,7 @@ async function request(method, path, body, { retry = true, auth = true } = {}) {
         try { data = JSON.parse(text); } catch { data = { detail: text.slice(0, 200) }; }
     }
     if (!response.ok) {
-        if (response.status === 401 && auth) logout(false);
+        if (response.status === 401 && auth) logout(false).catch(() => showLogin());
         throw new ApiError(response.status, data);
     }
     return data;
@@ -163,16 +168,24 @@ const api = {
 
 async function login(username, password) {
     const data = await request("POST", "/api/token/", { username, password }, { auth: false, retry: false });
-    state.access = data.access;
-    sessionStorage.setItem(REFRESH_KEY, data.refresh);
+    storeTokens(data);
 }
+function storeTokens(data) {
+    // Solo se guardan valores con formato JWT (header.payload.firma).
+    if (!JWT_FORMAT.test(data.access || "")) throw new ApiError(0, { detail: "La API entregó un token inválido." });
+    state.access = data.access;
+    if (data.refresh) {
+        if (!JWT_FORMAT.test(data.refresh)) throw new ApiError(0, { detail: "La API entregó un token inválido." });
+        sessionStorage.setItem(REFRESH_KEY, data.refresh);
+    }
+}
+
 async function refreshTokens() {
     const refresh = sessionStorage.getItem(REFRESH_KEY);
     if (!refresh) return false;
     try {
         const data = await request("POST", "/api/token/refresh/", { refresh }, { auth: false, retry: false });
-        state.access = data.access;
-        if (data.refresh) sessionStorage.setItem(REFRESH_KEY, data.refresh);
+        storeTokens(data);
         return true;
     } catch {
         sessionStorage.removeItem(REFRESH_KEY);
@@ -225,7 +238,7 @@ async function showApp() {
     if (!state.user) state.user = await api.get("/api/yo/");
     $("#who").textContent = state.user.nombre;
     $("#role").textContent = state.user.rol;
-    route();
+    await route();
 }
 
 async function route() {
@@ -241,7 +254,10 @@ async function route() {
         else if (RESOURCES[section]) await renderList(view, section);
         else location.hash = "#/inicio";
     } catch (err) {
-        view.innerHTML = `<p class="alert error">${esc(err.message)}</p>`;
+        const box = document.createElement("p");
+        box.className = "alert error";
+        box.textContent = err.message;  // Texto plano: nunca se interpreta como HTML.
+        view.replaceChildren(box);
     }
     $("#main").focus();
 }
@@ -294,15 +310,16 @@ async function renderList(view, name, page = 1, query = "") {
                 || `<tr><td colspan="${res.columns.length + 1}">No hay registros.</td></tr>`}</tbody>
         </table></div>
         <p class="muted pager">${data.count} registros${data.previous ? ' · <button class="linkish" data-page="-1">Anterior</button>' : ""}${data.next ? ' · <button class="linkish" data-page="1">Siguiente</button>' : ""}</p>`;
-    $("#search").addEventListener("submit", (e) => { e.preventDefault(); renderList(view, name, 1, e.target.q.value.trim()); });
-    view.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => renderList(view, name, page + Number(b.dataset.page), query)));
+    const reload = (p, q) => renderList(view, name, p, q).catch((err) => flash(err.message, "error"));
+    $("#search").addEventListener("submit", (e) => { e.preventDefault(); reload(1, e.target.q.value.trim()); });
+    view.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => reload(page + Number(b.dataset.page), query)));
     view.querySelectorAll("[data-delete]").forEach((b) => b.addEventListener("click", async () => {
         if (!confirm(`¿Eliminar este registro de ${res.title.toLowerCase()}?`)) return;
         try {
             await api.del(`/api/${name}/${b.dataset.delete}/`);
             delete state.cache[name];
             flash("Registro eliminado (204 No Content).");
-            renderList(view, name, page, query);
+            await reload(page, query);
         } catch (err) { flash(err.message, "error"); }
     }));
 }
@@ -401,12 +418,12 @@ $("#login-form").addEventListener("submit", async (event) => {
         button.disabled = false;
     }
 });
-$("#logout").addEventListener("click", () => logout(true));
-window.addEventListener("hashchange", route);
+$("#logout").addEventListener("click", () => { logout(true).catch(() => showLogin()); });
+window.addEventListener("hashchange", () => { route().catch((err) => flash(err.message, "error")); });
 
 (async function start() {
     if (await refreshTokens()) {
         try { await showApp(); return; } catch { /* sesión inválida */ }
     }
     showLogin();
-})();
+})().catch(() => showLogin());

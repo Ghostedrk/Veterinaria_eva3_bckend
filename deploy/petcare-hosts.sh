@@ -12,14 +12,14 @@ TOKEN=$(curl -sf -m 2 -X PUT "$META/api/token" -H "X-aws-ec2-metadata-token-ttl-
 meta() {
     curl -sf -m 2 -H "X-aws-ec2-metadata-token: $TOKEN" "$META/meta-data/$1" || true
 }
-if [ -n "$TOKEN" ]; then
+if [[ -n "$TOKEN" ]]; then
     for value in "$(meta public-ipv4)" "$(meta public-hostname)" "$(meta local-ipv4)"; do
-        [ -n "$value" ] && HOSTS="$HOSTS,$value"
+        [[ -n "$value" ]] && HOSTS="$HOSTS,$value"
     done
 fi
 
 EXTRA=$(grep -E '^PETCARE_EXTRA_HOSTS=' /etc/petcare/petcare.env 2>/dev/null | cut -d= -f2- || true)
-[ -n "$EXTRA" ] && HOSTS="$HOSTS,$EXTRA"
+[[ -n "$EXTRA" ]] && HOSTS="$HOSTS,$EXTRA"
 
 printf 'PETCARE_HOSTS=%s\n' "$HOSTS" > "$OUT"
 chmod 644 "$OUT"

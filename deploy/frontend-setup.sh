@@ -10,7 +10,7 @@ API_BASE=${1:-}
 SRC=$(cd "$(dirname "$0")/.." && pwd)
 WEB=/var/www/petcare-frontend
 
-if [ "$(id -u)" -ne 0 ] || [ -z "$API_BASE" ]; then
+if [[ "$(id -u)" -ne 0 ]] || [[ -z "$API_BASE" ]]; then
     echo "Uso: sudo bash $0 https://<id>.execute-api.us-east-1.amazonaws.com" >&2
     exit 1
 fi

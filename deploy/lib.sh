@@ -14,7 +14,7 @@ set_env() {
 }
 
 require_root() {
-    if [ "$(id -u)" -ne 0 ]; then
+    if [[ "$(id -u)" -ne 0 ]]; then
         echo "Ejecuta este script con sudo." >&2
         exit 1
     fi

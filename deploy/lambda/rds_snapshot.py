@@ -15,10 +15,13 @@ import os
 from datetime import datetime, timezone
 
 import boto3
+from botocore.config import Config
 
 PREFIX = "petcare-7h-"
-rds = boto3.client("rds")
-sns = boto3.client("sns")
+# Tiempos de espera explícitos: una llamada colgada no consume todo el tiempo de la Lambda.
+AWS_CONFIG = Config(connect_timeout=5, read_timeout=15, retries={"max_attempts": 3, "mode": "standard"})
+rds = boto3.client("rds", config=AWS_CONFIG)
+sns = boto3.client("sns", config=AWS_CONFIG)
 
 
 def notify(subject, message):

@@ -8,11 +8,11 @@ APP_DIR=/opt/petcare
 ENV_DIR=/etc/petcare
 ENV_FILE=$ENV_DIR/petcare.env
 
-if [ "$(id -u)" -ne 0 ]; then
+if [[ "$(id -u)" -ne 0 ]]; then
     echo "Ejecuta este script con sudo." >&2
     exit 1
 fi
-if [ ! -f "$APP_DIR/manage.py" ]; then
+if [[ ! -f "$APP_DIR/manage.py" ]]; then
     echo "No se encontró $APP_DIR/manage.py. Clona el repositorio en $APP_DIR." >&2
     exit 1
 fi
@@ -29,7 +29,7 @@ git config --system --add safe.directory "$APP_DIR" 2>/dev/null || true
 
 echo "==> Variables de entorno ($ENV_FILE)"
 mkdir -p "$ENV_DIR"
-if [ ! -f "$ENV_FILE" ]; then
+if [[ ! -f "$ENV_FILE" ]]; then
     DB_PASS=$(python3 -c 'import secrets; print(secrets.token_urlsafe(24))')
     SECRET=$(python3 -c 'import secrets; print(secrets.token_urlsafe(50))')
     cat > "$ENV_FILE" <<EOF
@@ -59,7 +59,7 @@ set -a
 set +a
 
 echo "==> PostgreSQL"
-if [ "$PGHOST" = "127.0.0.1" ] || [ "$PGHOST" = "localhost" ]; then
+if [[ "$PGHOST" = "127.0.0.1" ]] || [[ "$PGHOST" = "localhost" ]]; then
 DEBIAN_FRONTEND=noninteractive apt-get install -y -q postgresql
 systemctl enable --now postgresql
 if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$PGUSER'" | grep -q 1; then
@@ -81,7 +81,7 @@ else
 fi
 
 echo "==> Entorno virtual y dependencias"
-[ -x "$APP_DIR/.venv/bin/python" ] || sudo -u petcare python3 -m venv "$APP_DIR/.venv"
+[[ -x "$APP_DIR/.venv/bin/python" ]] || sudo -u petcare python3 -m venv "$APP_DIR/.venv"
 sudo -u petcare "$APP_DIR/.venv/bin/pip" install -q --upgrade pip
 sudo -u petcare "$APP_DIR/.venv/bin/pip" install -q -r "$APP_DIR/requirements.txt"
 
@@ -107,7 +107,7 @@ echo "==> Nginx"
 # Ubuntu no crea /var/cache/nginx: la caché de estáticos necesita su carpeta antes de nginx -t.
 install -d -o www-data -g www-data -m 700 /var/cache/nginx /var/cache/nginx/petcare-static
 mkdir -p /var/www/certbot
-if [ -f "$ENV_DIR/https-domain" ]; then
+if [[ -f "$ENV_DIR/https-domain" ]]; then
     # HTTPS ya fue activado con enable-https.sh: se conserva al actualizar.
     DOMAIN=$(cat "$ENV_DIR/https-domain")
     sed "s/__DOMAIN__/$DOMAIN/g" "$APP_DIR/deploy/nginx-petcare-https.conf" > /etc/nginx/sites-available/petcare

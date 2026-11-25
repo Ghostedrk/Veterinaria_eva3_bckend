@@ -11,20 +11,20 @@ EMAIL=${2:-}
 APP_DIR=/opt/petcare
 ENV_FILE=/etc/petcare/petcare.env
 
-if [ "$(id -u)" -ne 0 ]; then echo "Ejecuta este script con sudo." >&2; exit 1; fi
-if [ -z "$DOMAIN" ] || [ -z "$EMAIL" ]; then
+if [[ "$(id -u)" -ne 0 ]]; then echo "Ejecuta este script con sudo." >&2; exit 1; fi
+if [[ -z "$DOMAIN" ]] || [[ -z "$EMAIL" ]]; then
     echo "Uso: sudo bash $0 <dominio> <correo>" >&2; exit 1
 fi
-if [ ! -f "$ENV_FILE" ]; then echo "Primero ejecuta deploy/setup.sh." >&2; exit 1; fi
+if [[ ! -f "$ENV_FILE" ]]; then echo "Primero ejecuta deploy/setup.sh." >&2; exit 1; fi
 
 echo "==> Comprobando que $DOMAIN apunte a esta instancia"
 TOKEN=$(curl -sf -m 2 -X PUT http://169.254.169.254/latest/api/token -H "X-aws-ec2-metadata-token-ttl-seconds: 60" || true)
 PUBLIC_IP=$(curl -sf -m 2 -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/public-ipv4 || true)
 RESOLVED=$(getent ahostsv4 "$DOMAIN" | awk 'NR==1 {print $1}')
-if [ -z "$RESOLVED" ]; then
+if [[ -z "$RESOLVED" ]]; then
     echo "!! $DOMAIN no resuelve a ninguna IP. Revisa el registro en DuckDNS." >&2; exit 1
 fi
-if [ -n "$PUBLIC_IP" ] && [ "$RESOLVED" != "$PUBLIC_IP" ]; then
+if [[ -n "$PUBLIC_IP" ]] && [[ "$RESOLVED" != "$PUBLIC_IP" ]]; then
     echo "!! $DOMAIN apunta a $RESOLVED, pero la IP pública de esta instancia es $PUBLIC_IP." >&2
     echo "   Actualiza la IP en DuckDNS y vuelve a intentarlo en un par de minutos." >&2
     exit 1

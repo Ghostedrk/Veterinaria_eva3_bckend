@@ -10,13 +10,13 @@ set -euo pipefail
 require_root
 
 ORIGIN=${1:-}
-if [ -z "$ORIGIN" ]; then
+if [[ -z "$ORIGIN" ]]; then
     echo "Uso: sudo bash $0 http://<IP-del-frontend>" >&2
     exit 1
 fi
 
 SECRET=$(grep -E '^PETCARE_GATEWAY_SECRET=' "$ENV_FILE" | cut -d= -f2- || true)
-if [ -z "$SECRET" ]; then
+if [[ -z "$SECRET" ]]; then
     SECRET=$(python3 -c 'import secrets; print(secrets.token_hex(24))')
     set_env PETCARE_GATEWAY_SECRET "$SECRET"
 fi

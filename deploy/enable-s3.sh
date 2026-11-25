@@ -10,7 +10,7 @@ set -euo pipefail
 require_root
 
 BUCKET=${1:-}
-if [ -z "$BUCKET" ]; then
+if [[ -z "$BUCKET" ]]; then
     echo "Uso: sudo bash $0 <nombre-del-bucket>" >&2
     exit 1
 fi
@@ -33,7 +33,7 @@ print('Block Public Access:', all(pab.values()))
 echo "==> Subiendo estáticos versionados a s3://$BUCKET/static/"
 petcare-manage collectstatic --noinput -v 0
 
-if [ -d /var/lib/petcare/media ] && [ -n "$(find /var/lib/petcare/media -type f 2>/dev/null | head -1)" ]; then
+if [[ -d /var/lib/petcare/media ]] && [[ -n "$(find /var/lib/petcare/media -type f 2>/dev/null | head -1)" ]]; then
     echo "==> Copiando adjuntos existentes a s3://$BUCKET/media/"
     petcare-manage migrar_media_s3 /var/lib/petcare/media
 fi

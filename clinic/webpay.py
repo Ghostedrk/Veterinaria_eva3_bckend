@@ -7,6 +7,7 @@ import json
 import re
 import urllib.error
 import urllib.request
+from urllib.parse import quote
 
 from django.conf import settings
 
@@ -56,4 +57,4 @@ def commit_transaction(token):
     """Confirma la transacción y devuelve su resultado (status, response_code, amount...)."""
     if not valid_token(token):
         raise WebpayError("Token de Webpay inválido.")
-    return _request("PUT", f"/{token}")
+    return _request("PUT", f"/{quote(token, safe='')}")

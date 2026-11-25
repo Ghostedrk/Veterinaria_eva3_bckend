@@ -7,13 +7,15 @@
 # Los informes quedan en /home/ubuntu/zap/ (HTML, JSON y Markdown).
 set -euo pipefail
 
-if [ "$(id -u)" -ne 0 ] || [ "$#" -lt 1 ]; then
+if [[ "$(id -u)" -ne 0 ]] || [[ "$#" -lt 1 ]]; then
     echo "Uso: sudo bash $0 <url1> [url2 ...]" >&2
     exit 1
 fi
 OUT=/home/ubuntu/zap
-install -d -o ubuntu -g ubuntu "$OUT"
-chmod 777 "$OUT"  # El contenedor de ZAP escribe como usuario sin privilegios.
+# La carpeta pertenece a ubuntu (755) y el contenedor corre con ese mismo UID: no hace falta
+# dar permisos de escritura a otros usuarios (hallazgo shell:S2612 de SonarQube).
+install -d -o ubuntu -g ubuntu -m 755 "$OUT"
+RUN_AS="$(id -u ubuntu):$(id -g ubuntu)"
 
 if ! command -v docker >/dev/null; then
     apt-get update -q
@@ -28,7 +30,7 @@ for target in "$@"; do
     name="zap-$n-$(echo "$target" | sed -E 's#https?://##; s#[^A-Za-z0-9]+#-#g; s#-$##')"
     echo "==> ZAP Baseline sobre $target"
     # Código de salida: 0 sin alertas, 1 FAIL, 2 WARN. Se registra pero no detiene el script.
-    docker run --rm -v "$OUT":/zap/wrk:rw ghcr.io/zaproxy/zaproxy:stable \
+    docker run --rm --user "$RUN_AS" -v "$OUT":/zap/wrk:rw ghcr.io/zaproxy/zaproxy:stable \
         zap-baseline.py -t "$target" -m 2 -r "$name.html" -J "$name.json" -w "$name.md" -I || true
 done
 chown -R ubuntu:ubuntu "$OUT"

@@ -17,7 +17,7 @@ DB=petcare
 APP_USER=petcare_app
 CA=/etc/petcare/rds-ca.pem
 
-if [ -z "$ENDPOINT" ]; then
+if [[ -z "$ENDPOINT" ]]; then
     echo "Uso: sudo bash $0 <endpoint-rds> [usuario-maestro]" >&2
     exit 1
 fi
@@ -52,7 +52,7 @@ TABLES=$(app -tAc "SELECT count(*) FROM information_schema.tables WHERE table_sc
 set -a
 . "$ENV_FILE"
 set +a
-if { [ "$PGHOST" = "127.0.0.1" ] || [ "$PGHOST" = "localhost" ]; } && [ "$TABLES" = "0" ]; then
+if { [[ "$PGHOST" = "127.0.0.1" ]] || [[ "$PGHOST" = "localhost" ]]; } && [[ "$TABLES" = "0" ]]; then
     echo "==> Copiando datos desde el PostgreSQL local"
     DUMP=$(mktemp /tmp/petcare-XXXXXX.sql)
     sudo -u postgres pg_dump --no-owner --no-privileges "$PGDATABASE" > "$DUMP"
