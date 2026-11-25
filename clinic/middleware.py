@@ -21,6 +21,8 @@ class SecurityHeadersMiddleware:
             response["Cache-Control"] = "no-store"
             response["Pragma"] = "no-cache"
         response.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+        # ZAP 10063: el panel no usa cámara, micrófono, geolocalización ni pagos del navegador.
+        response.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
         return response
 
 

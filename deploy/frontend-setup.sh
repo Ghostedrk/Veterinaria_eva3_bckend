@@ -44,8 +44,14 @@ server {
     add_header X-Frame-Options DENY always;
     add_header Referrer-Policy strict-origin-when-cross-origin always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    add_header Cross-Origin-Resource-Policy same-origin always;
 
-    location = /config.js { add_header Cache-Control "no-cache"; add_header Content-Security-Policy "default-src 'self'" always; }
+    location = /config.js {
+        add_header Cache-Control "no-cache";
+        add_header Content-Security-Policy "default-src 'self'" always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header Cross-Origin-Resource-Policy same-origin always;
+    }
     location / { try_files \$uri \$uri/ /index.html; }
 }
 EOF

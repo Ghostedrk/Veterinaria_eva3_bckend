@@ -352,7 +352,7 @@ async function renderForm(view, name, id) {
     const row = id ? await api.get(`/api/${name}/${id}/`) : {};
     view.innerHTML = `
         <a class="back" href="#/${name}">Volver a ${esc(res.title.toLowerCase())}</a>
-        <form class="card form" id="record-form" novalidate>
+        <form class="card form" id="record-form" method="post" action="#" novalidate>
             <h1>${id ? `Editar ${esc(res.singular)}` : esc(res.nuevo)}</h1>
             ${res.help ? `<p class="muted">${esc(res.help)}</p>` : ""}
             <p class="alert error" id="form-error" hidden></p>
