@@ -3,8 +3,8 @@
 **Proyecto:** PetCare · Veterinaria San Francisco (Proyecto 1)
 **Repositorio:** https://github.com/Ghostedrk/Veterinaria_eva3_bckend
 **Backend (panel y Django Admin):** https://petcare-sfvet.duckdns.org · EC2 `petcare-eva3` (IP elástica 44.213.33.107)
-**Frontend:** http://`<IP-FRONTEND>`/ · EC2 `petcare-frontend`
-**API pública:** `https://<ID>.execute-api.us-east-1.amazonaws.com/api/` (Amazon API Gateway, HTTP API)
+**Frontend:** http://100.28.58.152/ · EC2 `petcare-frontend` (IP elástica)
+**API pública:** https://jsfeops7o5.execute-api.us-east-1.amazonaws.com/api/ (Amazon API Gateway, HTTP API)
 **Documentación de la API:** https://petcare-sfvet.duckdns.org/docs/api/ (OpenAPI 3 / Swagger, requiere sesión del personal)
 
 > Las capturas se identifican como **E01, E02…** según el índice de la sección 1. Cada una muestra una configuración o un resultado verificable, no solo el nombre del servicio.
@@ -141,7 +141,7 @@ Las reglas de negocio responden **400** con el detalle por campo. Las relaciones
 ### 3.4 Ejemplos de prueba (E06)
 
 ```bash
-API=https://<ID>.execute-api.us-east-1.amazonaws.com
+API=https://jsfeops7o5.execute-api.us-east-1.amazonaws.com
 TOKEN=$(curl -s -X POST $API/api/token/ -H 'Content-Type: application/json' \
         -d '{"username":"<usuario>","password":"<contraseña>"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["access"])')
 curl -s $API/api/tutores/                                   # 401: sin token
@@ -177,31 +177,74 @@ sudo petcare-manage dbshell -- -c "SELECT id, nombre, especie FROM clinic_mascot
 
 **Herramienta:** SonarQube Cloud (el servicio SaaS de SonarSource, antes SonarCloud), conectado al repositorio de GitHub con *Automatic Analysis*. La configuración está en `sonar-project.properties`: analiza `clinic/`, `petcare/`, `frontend/` y `deploy/`, y excluye las migraciones.
 
-| Métrica | Resultado |
-|---|---|
-| Bugs | _completar_ |
-| Vulnerabilidades | _completar_ |
-| Security Hotspots | _completar_ |
-| Code Smells | _completar_ |
-| Duplicación | _completar_ |
+**Proyecto:** https://sonarcloud.io/project/overview?id=Ghostedrk_Veterinaria_eva3_bckend (público).
 
-**Hallazgo analizado:** _regla, archivo y línea_ → _causa_ → _corrección (commit)_ o _justificación técnica_.
+| Calidad (Clean Code) | Primer análisis (`68a1fee`) | Después de corregir (`d3ca928`) |
+|---|---|---|
+| Security | 11 abiertos · calificación **E** | 7 abiertos, todos revisados y justificados |
+| Reliability | 38 abiertos · calificación **C** | 0 |
+| Maintainability | 2 abiertos · calificación **A** | 0 |
+| Security Hotspots | 0 | 0 |
+| Duplicación | 0,3 % | 0,3 % |
+
+**Hallazgos corregidos** (commits `0176ea8` y `d3ca928`):
+
+| Regla | Dónde | Problema | Corrección |
+|---|---|---|---|
+| **shell:S2612** (hallazgo principal, E10) | `deploy/zap-scan.sh` | `chmod 777` en la carpeta de informes: cualquier usuario del sistema podía escribir o reemplazar archivos | Carpeta `755` del usuario `ubuntu` y contenedor de ZAP ejecutado con ese mismo UID (`docker run --user`) |
+| python:S7618 | `deploy/lambda/rds_snapshot.py` | Clientes boto3 sin tiempo de espera: una llamada colgada consumiría todo el tiempo de la Lambda | `Config(connect_timeout=5, read_timeout=15, retries=3)` |
+| pythonsecurity:S7044 | `clinic/webpay.py` | Token recibido por HTTP usado en la ruta de la API de Transbank | Se valida con `[A-Za-z0-9]{1,64}` y además se codifica con `quote()` |
+| jssecurity:S8476 | `frontend/app.js` | La URL de `fetch()` se arma con datos variables | Solo se permiten rutas relativas `/api/…` (expresión regular) |
+| javascript:S9383 (6) | `frontend/app.js` | Promesas sin manejo de errores | Todas usan `await` o `.catch()` |
+| shell:S7688 (31) | `deploy/*.sh` | `[ ]` en lugar de `[[ ]]` | Condiciones con `[[ ]]` |
+
+**Hallazgos revisados y justificados:**
+
+| Regla | Dónde | Justificación técnica |
+|---|---|---|
+| jssecurity:S5696 (3) | `frontend/app.js` | Se arma HTML con `innerHTML`, pero **todo valor dinámico pasa por `esc()`**, que escapa `& < > " '`. Además la CSP del frontend (`script-src 'self'`) impide ejecutar scripts en línea o inyectados. El mensaje de error se cambió a `textContent` |
+| jssecurity:S8475 | `frontend/app.js` | El refresh token se guarda en `sessionStorage` solo si tiene formato JWT. La firma la valida el servidor en cada uso, así que un valor alterado se rechaza con 401 |
+| python:S4502 | `clinic/purchase_views.py` | `csrf_exempt` en el retorno de Webpay: Transbank vuelve con un POST desde su dominio y no puede traer el token CSRF. El pago se confirma en el servidor con `commit` (verifica monto y orden) y cada pago se procesa una sola vez |
+| shell:S5332 (2) | `deploy/*.sh` | `http://169.254.169.254` es el servicio de metadatos de EC2, que solo funciona por HTTP y es local de la instancia. El otro caso es un texto de ayuda |
 
 ### 4.2 OWASP ZAP (DAST) · E11, E12
 
 **Ejecución:** `deploy/zap-scan.sh`, que usa ZAP Baseline en Docker desde la EC2 frontend. Es un entorno propio y autorizado. Baseline hace una exploración (*spider*) y un **análisis pasivo**, sin ataques ni cambios de datos.
 
 ```bash
-sudo bash /opt/petcare-src/deploy/zap-scan.sh http://<IP-FRONTEND>/ https://petcare-sfvet.duckdns.org/ https://<ID>.execute-api.us-east-1.amazonaws.com/api/salud/
+sudo bash /opt/petcare-src/deploy/zap-scan.sh http://100.28.58.152/ https://petcare-sfvet.duckdns.org/ https://jsfeops7o5.execute-api.us-east-1.amazonaws.com/api/salud/
 ```
 
-| Objetivo | Alta | Media | Baja | Informativa |
-|---|---|---|---|---|
-| Frontend | _ | _ | _ | _ |
-| Backend (panel) | _ | _ | _ | _ |
-| API Gateway | _ | _ | _ | _ |
+Resultado (alertas de nivel FAIL y WARN de ZAP Baseline, más los controles aprobados):
 
-**Hallazgo analizado:** _alerta, URL, riesgo y confianza_ → _causa_ → _tratamiento_.
+| Objetivo | Antes | Después de corregir |
+|---|---|---|
+| Frontend `http://100.28.58.152/` | 0 FAIL · 6 WARN · 62 PASS | 0 FAIL · 5 WARN · 63 PASS |
+| Backend `https://petcare-sfvet.duckdns.org/` | 0 FAIL · 13 WARN · 55 PASS | 0 FAIL · 9 WARN · 59 PASS |
+| API `https://jsfeops7o5.execute-api…/api/salud/` | 0 FAIL · 6 WARN · 62 PASS | 0 FAIL · 3 WARN · 65 PASS |
+
+**Hallazgo analizado (E12): [10036] Server Leaks Version Information + [20020] nginx Version with Known Vulnerabilities.**
+- **Qué vio ZAP:** toda respuesta del backend, incluso a través de API Gateway, incluía `Server: nginx/1.28.3`.
+- **Riesgo:** revelar la versión exacta permite buscar vulnerabilidades conocidas (CVE) de esa versión y dirigir el ataque (reconocimiento). La alerta 20020 confirma que había CVE publicados para esa línea de versiones.
+- **Corrección:** `server_tokens off;` en cada bloque `server` de Nginx (commits `dc9b9ad` y `b185361`). Ahora la cabecera es solo `Server: nginx`. Mantener los paquetes actualizados con `apt` sigue siendo necesario: ocultar la versión no elimina la vulnerabilidad, solo dificulta el reconocimiento.
+
+**Otros hallazgos corregidos:**
+
+| Alerta | Objetivo | Corrección |
+|---|---|---|
+| [10024] Sensitive Information in URL | Frontend | El formulario de login no tenía `method="post"`: sin JavaScript, el navegador enviaría usuario y contraseña en la URL. Ahora es `method="post"` |
+| [10035] Strict-Transport-Security Not Set | Backend y API | HSTS de 1 año (`SECURE_HSTS_SECONDS`) |
+| [10015]/[10049] Cache-control | API | `Cache-Control: no-store` en `/api/`: los datos clínicos no quedan en cachés |
+| [10010] Cookie No HttpOnly | Backend | `CSRF_COOKIE_HTTPONLY = True` |
+| [10063] Permissions Policy / [90004] CORP | Backend, API y frontend | Cabeceras `Permissions-Policy` y `Cross-Origin-Resource-Policy` |
+| [10021] X-Content-Type-Options | Frontend | Cabeceras repetidas en el bloque `config.js` de Nginx |
+
+**Alertas restantes y tratamiento:**
+- **[10202] Absence of Anti-CSRF Tokens** (frontend): falso positivo. El formulario no se envía al servidor; JavaScript llama a la API con `Authorization: Bearer <JWT>`. CSRF depende de cookies enviadas automáticamente, y el JWT no viaja en cookies.
+- **[10035] HSTS en respuestas 404 de API Gateway** (`/`, `/robots.txt`): esas respuestas las genera API Gateway para rutas no definidas, no Django. La ruta real `/api/salud/` sí incluye HSTS.
+- **[10038] CSP y [90003] SRI** (panel Django): el panel usa algunos scripts en línea (copiar enlace, firma del consentimiento) y Google Fonts. Agregar CSP requiere mover esos scripts a archivos; queda como mejora planificada. El frontend expuesto sí tiene una CSP estricta.
+- **[10031] User Controllable HTML Element Attribute**: el parámetro `next` del login se refleja escapado por Django (no ejecutable).
+- **[10109], [10111], [10112], [90004 COEP]**: informativas. ZAP solo avisa que detectó un formulario de login, gestión de sesión o una aplicación moderna.
 
 ### 4.3 Comparación SAST y DAST
 
@@ -304,7 +347,7 @@ Al iniciar sesión, si el hash usa un algoritmo o costo antiguo, Django lo **act
 ### 6.3 Prueba (E16)
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File deploy\rate-limit-test.ps1 -Url https://<ID>.execute-api.us-east-1.amazonaws.com/api/salud/ -Total 30
+powershell -ExecutionPolicy Bypass -File deploy\rate-limit-test.ps1 -Url https://jsfeops7o5.execute-api.us-east-1.amazonaws.com/api/salud/ -Total 30
 ```
 
 Resultado esperado: las primeras solicitudes (ráfaga) responden **200** y el resto **429 Too Many Requests**, generadas por API Gateway sin llegar a la EC2. Los límites son objetivos de *token bucket*, por lo que el corte exacto puede variar.
@@ -344,7 +387,7 @@ El cifrado en reposo no se puede activar en una instancia existente. Para hacerl
 
 | Control | Configuración | Evidencia |
 |---|---|---|
-| Bucket | `<BUCKET>`: `static/` (CSS, imágenes, fuentes), `media/` (adjuntos clínicos), `reportes/` (PDF/Excel) | E24 |
+| Bucket | `petcare-sfvet-inacap2026`: `static/` (CSS, imágenes, fuentes), `media/` (adjuntos clínicos), `reportes/` (PDF/Excel) | E24 |
 | Cifrado en reposo | SSE-S3 (AES-256) por defecto en el bucket y explícito en cada objeto (`ServerSideEncryption: AES256`) | E22 |
 | Block Public Access | Los 4 bloqueos activados: ningún objeto es público | E23 |
 | Permisos | La EC2 usa el rol IAM `LabInstanceProfile` (credenciales temporales rotadas por STS). No hay claves de acceso en el código ni en el servidor | E26 |
